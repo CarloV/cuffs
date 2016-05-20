@@ -1,5 +1,7 @@
 #Cuffs
 
+[![Build Status](https://travis-ci.org/CarloV/cuffs.svg?branch=master)](https://travis-ci.org/CarloV/cuffs)
+
 ### Define your own cuffs to restrict behaviour on a javascript value
 
 `cuffs` is a library used to force a type on your javascript value. The main idea comes from the library [type-check](http://github.com/gkz/type-check), where one can check if a javascript value is of a certain type. This library is different in that we force a type onto a certain javascript value. This means that if the javascript value doesn't cohere to the type we forced, it returns an Error, otherwise values are casted or unchanged to fit the needs of the cuffs you defined. Note that forcing is only fully functional when proxies are turned on, otherwise forcing is only done once for array-like, tuple-like and object-like statements. Functions however, are fully proxied even when proxies aren't turned on. The library also allows type casting and custom types. All together this package is really useful for testing, checking input values, or giving your code some structure.
