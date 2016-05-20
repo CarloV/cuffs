@@ -89,7 +89,7 @@ obj.bar('1','2','3') //Error
 ```
 
 ## Examples when proxies are turned on
-**Note: in node.js you need to turn on the harmony_proxies flag to let this work**
+**Note: in node.js you need to turn on the harmony_proxies flag to let this work** <br/>
 **Note: for browser usage, check out http://caniuse.com/#feat=proxy which browsers are supported**
 
 ```js
@@ -104,7 +104,7 @@ OO.useProxies(true);
 //Force objects to stay the way they are
 var obj = OO('{foo: String, bar: Number}',{foo:'baz',bar:1}); //{foo:'baz',bar:1}
 obj.foo = 'works'; 	            //'works'
-obj.bar = 'doesn't work';       //Error
+obj.bar = "doesn't work";       //Error
 obj.foo = 12345; 		        //Error
 delete obj.foo; 	            //Error
 obj.baz = "doesn't work either" //Error
