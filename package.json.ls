@@ -93,5 +93,7 @@ scripts:
 	'clean:coverage': 	"#rimraf coverage"
 
 	'preversion': 		run \test
-	'version':			run <[ version:apply build ]> 
+	'version':			run <[ version:apply build git:add]> 
 	'version:apply': 	"#lsc version"
+
+	'git:add':          "git add ."

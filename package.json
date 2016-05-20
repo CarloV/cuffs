@@ -61,7 +61,8 @@
     "clean:browser": "./node_modules/.bin/rimraf browser/*",
     "clean:coverage": "./node_modules/.bin/rimraf coverage",
     "preversion": "npm run test",
-    "version": "npm run version:apply && npm run build",
-    "version:apply": "./node_modules/.bin/lsc version"
+    "version": "npm run version:apply && npm run build && npm run git:add",
+    "version:apply": "./node_modules/.bin/lsc version",
+    "git:add": "git add ."
   }
 }
