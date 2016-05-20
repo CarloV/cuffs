@@ -85,7 +85,7 @@ func5('test')()(); 	//'test'
 func5(5)()(); 		//Error
 
 //Force even more complex statements
-var obj = OO('{foo: String -> String, bar: (!Number, !Number) -> Number}',{foo: function(a){a + "!"},bar: function(a,b){a + b})
+var obj = OO('{foo: String -> String, bar: (!Number, !Number) -> Number}',{foo: function(a){return a + "!"},bar: function(a,b){return a + b})
 obj.foo(\lol); 		 //lol!
 obj.bar('1','2'); 	 //3
 obj.foo(0);			 //Error
