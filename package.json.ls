@@ -1,6 +1,6 @@
 silence-npm = no
 symbolic = yes
-version = \0.0.1
+version = \0.0.2
 
 run = (s)->
 	ss = if silence-npm then " -s" else ""

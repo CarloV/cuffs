@@ -260,7 +260,7 @@ function ProxyShim(target, handler) {
   id = function(it){
     return it;
   };
-  version = '0.0.1';
+  version = '0.0.2';
   $typeof = function(a){
     var that, mat;
     if (!(a != null && a.constructor != null)) {
