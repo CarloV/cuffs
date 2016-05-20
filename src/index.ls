@@ -40,8 +40,7 @@ modifiers =
         try 
             lits.Inexistent(err)(v)
         catch 
-            return a v #needs to be more async
-            #return if typeof! av is \Function then inception-helper av else av
+            return a v
             
                     
 
@@ -68,35 +67,18 @@ or-helper =
 
         if _Af == false and _Bf == false
             throw new Error m1 + ' And ' + m2
-        else if _Af == false and _Bf != false# and typeof! Bf is \Function
+        else if _Af == false and _Bf != false
             return Bf
-        else if _Bf == false and _Af != false# and typeof! Af is \Function
+        else if _Bf == false and _Af != false
             return Af 
         else if $typeof(Af) is \Function and $typeof(Bf) is \Function
             return or-helper e, Af,Bf
         else #2 answers, then we just or them as usual
             return Af || Bf
 
-and-helper = #isn't this just the composition of A and B: (v)-> B(A(v))
+and-helper =
     (e, A,B)-> -> B A ...
-        # Af = A ...
-        # Bf = B ... #maybe Af should be fed into B, or we should make && for that special functionality
-        # if $typeof(Bf) isnt \Function
-        #     return Af 
-        # else if $typeof(Af) isnt \Function
-        #     return Bf 
-        # else
-        #     return and-helper e, Af, Bf
 
-
-        
-#Array{length: 3} -> (Number -> Number) -> Number           #[[[Array,[[length,3]:property]:brackets]:object,[[[Number,Number]:arrow]:parenthesis,Number]:arrow]:arrow
-
-#(
-#   ({customTypes:Maybe [{...}]|{...((err)-> * -> *)}, parseRegexTypes:Maybe Boolean, useProxies:Maybe Boolean, on-error:({message,openPos,closePos,str})->}) -> ((String -> * -> *) | ((String, *) -> *))
-#) | (
-#   -> ((String -> * -> *) | ((String, *) -> *))
-#)
 Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})-> 
     modes = {}
     literals = lits
@@ -130,7 +112,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
             switch $typeof v
             | \String => 
                 p = parse-to-function parse-to-array(v), OOError(v)
-                O[k] = (err)-> p #maybe do something with err here, to get nested errors
+                O[k] = (err)-> p
             | \Function => 
                 if v.length == 2
                     O[k] = (err)-> (w)->v err,w 
@@ -153,12 +135,12 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
         f =(s,listen-to,mode) ->
             switch $typeof listen-to
             | \String => 
-                if !s.index-of listen-to #is 0
+                if !s.index-of listen-to
                     if no isnt mode arr, L
                         return s.slice listen-to.length
 
             | \RegExp => 
-                if !s.search listen-to #is 0
+                if !s.search listen-to
                     m = s.match listen-to
                     if no isnt mode arr, m , L
                         return s.slice m.0.length
@@ -206,7 +188,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
         | \array =>
             g = sf arr.0
             prelim-check = (v)-> 
-                e 'Not an Array' unless v instanceof Array #if proxy is shimmed the typeof! doesnt work anymore
+                e 'Not an Array' unless v instanceof Array #if proxy is shimmed the typeof! doesnt work properly anymore
                 [g .. for v]
 
             return prelim-check unless use-proxies
@@ -289,7 +271,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
 
         | \tuple =>
             prelim-check = (v)-> 
-                e 'Not an Array' unless v instanceof Array #if proxy is shimmed the typeof! doesnt work anymore
+                e 'Not an Array' unless v instanceof Array #if proxy is shimmed the typeof! doesnt work properly anymore
                 e "Tuple length doesn't match" if v.length isnt arr.length
                 [sf(arr[i])(v[i]) for i til v.length]
 
@@ -319,8 +301,6 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                         target[prop] = sf(arr[prop])(void)
                         return true
 
-                    #apply: -> #prevent using any function that can let the array grow or shrink.
-
         | \argument-tuple =>
             if arr.length == 0
                 return -> if $typeof(it) is \Array and it.length == 0 then it else e 'Arguments should be an empty tuple'
@@ -329,7 +309,8 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                 if ellipsii == 0
                     return (v)-> 
                         e "Argument Tuple length doesn't match" if v.length isnt arr.length
-                        [sf(arr[i])(v[i]) for i til arr.length] #todo: optional arguments 
+                        [sf(arr[i])(v[i]) for i til arr.length]
+
                 else if ellipsii == 1
                     j = 0
                     fa = []
@@ -351,7 +332,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                         ell = sf arr[j]0
 
                     return (v)->
-                        e "Argument tuple length doesn't match" if v.length < arr.length - 1 #todo: optional arguments 
+                        e "Argument tuple length doesn't match" if v.length < arr.length - 1
                         fp = [fa[i](v[i]) for i til j]
                         lp = [la[i](v[i + v.length - arr.length + j + 1]) for i til arr.length - j - 1]
                         mp = [ell(v[i]) for i from j til v.length - arr.length + j + 1]
@@ -361,9 +342,6 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                     throw new Error 'An argument tuple can only hold at most one ellipsis'
 
         | \arrow =>
-            #if the argument is a tuple or parenthesis, use it as a tuple
-            #if the argument is not a tuple, use it as a sole argument
-            #if there is no argument then there shouldn't be arguments.
             u = []
             if arr.0? and arr.0.type in <[ tuple parenthesis ]>
                 u = arr.0
@@ -381,7 +359,6 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
             | \--> \!--> => 
                 if u.length > 1
                     u.type = \tuple 
-                    #g = sf u
                     arity = u.length
                     fs = [sf u[i] for i til u.length]
                     _curry-helper = (params)->
@@ -404,7 +381,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                                         return ret fun.apply @, args
                     if arr.arrow-type is \--> #only check arguments, but don't curry the function
                         return _curry-helper []
-                    else
+                    else #otherwise we do curry the function
                         return (fun)->
                             _curry-helper([])(curry$ fun)
                     break
@@ -419,14 +396,12 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
 
 
         | \or =>
-            #throw new Error "OR requires two arguments" if arr.length isnt 2
             or-helper do 
                 e
                 sf arr.0
                 sf arr.1
 
         | \and =>
-            #throw new Error "AND requires two arguments" if arr.length isnt 2
             and-helper do 
                 e
                 sf arr.0
@@ -448,8 +423,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                         r = new RegExp that.1, that.2
                         if that$ = r.exec a
                             vt = v that$
-                            return sf if vt.length == 2 then ((err)-> (v)-> vt err,v) else vt
-                        #a .= to-string!
+                            return sf if vt.length == 2 then ((err)-> (v)-> vt err,v) else vt!
                 return -> if $typeof(it) is a then it else e "Not a#{if a.to-lower-case! in <[a e o u i]> then 'n' else ''} #a"
 
         # | \property \object-type => throw new Error "The type '#{arr.type}' should be parsed inside an object"
@@ -489,7 +463,6 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                 yes
             .. \< (arr,pos)-> arr.set [] .prop \type \literal .prop \mode \literal .prop \pos pos .up!
             .. \, (arr, pos)->  
-                #decide whether outer array is of [ ] type or ( ) type to see if tuple or array
                 while arr.parent-prop(\type) not in <[ parenthesis object tuple ]>
                     go-down arr, pos
                 
@@ -520,7 +493,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
             .. /[\s\S]/ (arr)->arr
 
 
-        .. \object #-string
+        .. \object
             .. /\\(\:|\}|\,|\.\.\.)/ (arr,mat)-> arr.set <| (arr.get! || '') + mat.1
             .. \: (arr,pos)-> arr.wrap!prop \type \property .prop \mode \normal .prop \pos pos .up!right!
             .. \} (arr,pos)-> go-down arr, pos + 1, <[ parenthesis tuple array ]>
