@@ -80,12 +80,12 @@ scripts:
 	'pretest': 			run \build:lib
 	'test': 			run \test:bare
 	'test:bare':		"#mocha --compilers ls:#livescript --harmony_proxies"
-	#'posttest': 		'git checkout -- lib'
+	'posttest': 		'git checkout -- lib'
 
 	'precoverage': 		run \build:lib
 	'coverage': 		run \coverage:bare
 	'coverage:bare':	"node --harmony_proxies #istanbul-cli cover #_mocha -- --compilers ls:#livescript -R nyan"
-	#'postcoverage': 	'git checkout -- lib'
+	'postcoverage': 	'git checkout -- lib'
 
 	'clean': 			run <[ clean:lib clean:browser clean:coverage ]>
 	'clean:lib': 		"#rimraf lib/*"
