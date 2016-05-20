@@ -63,6 +63,7 @@
     "preversion": "npm run test",
     "version": "npm run version:apply && npm run build && npm run git:add",
     "version:apply": "./node_modules/.bin/lsc version",
+    "postversion": "git push && git push --tags",
     "git:add": "git add ."
   }
 }

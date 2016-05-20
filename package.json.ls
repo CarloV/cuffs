@@ -95,5 +95,6 @@ scripts:
 	'preversion': 		run \test
 	'version':			run <[ version:apply build git:add]> 
 	'version:apply': 	"#lsc version"
+	'postversion': 		"git push && git push --tags"
 
 	'git:add':          "git add ."
