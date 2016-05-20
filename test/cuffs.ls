@@ -489,11 +489,10 @@ describe 'Cuffs' ->
                     '/Class(\\w+)/': (mat)-> (err)-> -> if it@@display-name is mat.1 then it else err "Not an instance of #{mat.1}"
                     '/Foo|Bar|Baz/': (mat)-> (err)-> -> if it is mat.0 then it else err "Not #{mat.0}"
                     '/Global_(\\w+)/': (mat)-> (err,it)-> if it is global[mat.1] then it else err "Not the global variable #{mat.1}"
-
             class Foo
                 (@foo)->
             a = new Foo \bar
-
+            
             expect(OO2)to.be.a \function
             expect(OO2('ClassFoo',a))to.eql a 
             expect(OO2('Foo',\Foo))to.eql \Foo

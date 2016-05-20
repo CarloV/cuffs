@@ -423,7 +423,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                         r = new RegExp that.1, that.2
                         if that$ = r.exec a
                             vt = v that$
-                            return sf if vt.length == 2 then ((err)-> (v)-> vt err,v) else vt!
+                            return sf if vt.length == 2 then ((err)-> (v)-> vt err,v) else vt 
                 return -> if $typeof(it) is a then it else e "Not a#{if a.to-lower-case! in <[a e o u i]> then 'n' else ''} #a"
 
         # | \property \object-type => throw new Error "The type '#{arr.type}' should be parsed inside an object"
