@@ -48,7 +48,7 @@ files:
 main: './lib/'
 
 engines: 
-	node: ">= 0.10.0"
+	node: ">= 0.12.0"
 repository:
 	type: \git
 	url: "https://github.com/CarloV/cuffs.git"
