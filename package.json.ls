@@ -63,7 +63,7 @@ dev-dependencies:
 	'uglify-js': 	'>= 2.6.2'
 	istanbul: 	'>= 0.4.3'
 	rimraf: 	'>= 2.5.2'
-	harmony-proxy: '>= 1.0.1'
+	'harmony-proxy': '>= 1.0.1'
 	replace: '>= 0.3.0'
 
 scripts:
