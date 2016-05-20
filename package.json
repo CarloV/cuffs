@@ -1,0 +1,65 @@
+{
+  "name": "cuffs",
+  "version": "0.0.1",
+  "author": "Carlo Verschoor",
+  "description": "Cuffs is a library that gives you authority over your javascript values. It let's you check, cast and fix a javascript value to a certain type.",
+  "keywords": [
+    "type",
+    "force",
+    "check",
+    "checking",
+    "library",
+    "cuffs",
+    "handcuffs",
+    "authority"
+  ],
+  "homepage": "https://github.com/CarloV/cuffs",
+  "bugs": "https://github.com/CarloV/cuffs/issues",
+  "license": "MIT",
+  "files": [
+    "lib",
+    "README.md"
+  ],
+  "main": "./lib/",
+  "engines": {
+    "node": ">= 0.10.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CarloV/cuffs.git"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "mocha": ">= 2.4.5",
+    "chai": ">= 3.5.0",
+    "livescript": ">= 1.4.0",
+    "browserify": ">= 13.0.0",
+    "uglify-js": ">= 2.6.2",
+    "istanbul": ">= 0.4.3",
+    "rimraf": ">= 2.5.2",
+    "harmonyProxy": ">= 1.0.1",
+    "replace": ">= 0.3.0"
+  },
+  "scripts": {
+    "prebuild": "npm run clean",
+    "build": "npm run build:lib && npm run build:browser && npm run build:browser-min",
+    "build:lib": "./node_modules/.bin/lsc --output lib --compile src",
+    "build:browser": "./node_modules/.bin/browserify -r ./lib/index.js:cuffs > ./browser/cuffs-browser.js",
+    "build:browser-min": "./node_modules/.bin/uglifyjs browser/cuffs-browser.js --mangle > browser/cuffs-browser.min.js",
+    "package": "./node_modules/.bin/lsc --compile package.json.ls",
+    "prepublish": "npm run test && npm run build",
+    "pretest": "npm run build:lib",
+    "test": "npm run test:bare",
+    "test:bare": "./node_modules/.bin/mocha --compilers ls:./node_modules/livescript --harmony_proxies",
+    "precoverage": "npm run build:lib",
+    "coverage": "npm run coverage:bare",
+    "coverage:bare": "node --harmony_proxies ./node_modules/istanbul/lib/cli.js cover ./node_modules/mocha/bin/_mocha -- --compilers ls:./node_modules/livescript -R nyan",
+    "clean": "npm run clean:lib && npm run clean:browser && npm run clean:coverage",
+    "clean:lib": "./node_modules/.bin/rimraf lib/*",
+    "clean:browser": "./node_modules/.bin/rimraf browser/*",
+    "clean:coverage": "./node_modules/.bin/rimraf coverage",
+    "preversion": "npm run test",
+    "version": "npm run version:apply && npm run build",
+    "version:apply": "./node_modules/.bin/lsc version"
+  }
+}
