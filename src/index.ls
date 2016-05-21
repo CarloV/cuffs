@@ -360,25 +360,23 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                 if u.length > 1
                     u.type = \tuple 
                     arity = u.length
-                    fs = [sf u[i] for i til u.length]
+                    fs = [sf u[i] for i til arity]
                     _curry-helper = (params)->
                         (fun)-> 
                             e "Not a Function" unless $typeof(fun) is \Function
                             (...args)->
                                 if args.length is 0 #execute the curry
                                     for i til arity
-                                        fs[i] params[i]
+                                        fs[i] params[i] #last check
                                     ret fun.apply @
                                 else #continue currying
                                     ps = params ++ args
                                     e 'Incorrect arity of curried arrow, received #{params.length} arguments and should be #{arity} arguments' if ps.length > arity
-                                    for i til ps.length
-                                        fs[i] ps[i]
-                                    
+                                    narg = [fs[i] ps[i] for i til ps.length]
                                     if ps.length < arity    
-                                        return ~> _curry-helper(ps)(fun.apply @, args) ...
+                                        return ~> _curry-helper(ps)(fun.apply @, narg.slice params.length,ps.length) ...
                                     else
-                                        return ret fun.apply @, args
+                                        return ret fun.apply @, narg.slice params.length,ps.length
                     if arr.arrow-type is \--> #only check arguments, but don't curry the function
                         return _curry-helper []
                     else #otherwise we do curry the function
