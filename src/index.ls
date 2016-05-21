@@ -428,6 +428,13 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
 
         # | \property \object-type => throw new Error "The type '#{arr.type}' should be parsed inside an object"
         # | \ellipsis => throw new Error "the type 'ellipsis' should be parsed inside an object or argument tuple"
+        | \this-binding =>
+            tf = sf arr.0
+            cf = sf arr.1
+            return (fun)->
+                h = cf fun 
+                (...b)-> h.apply tf(@), b
+
         | \string \number => 
             return -> if it is arr.0 then it else e "The #{arr.type} #{it} is unequal to #{arr.0}"
         | _ => throw new Error "Can't parse type #{arr.type} in this context"
@@ -468,6 +475,8 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                 
                 arr.parent-prop \type \tuple if arr.parent-prop(\type) is \parenthesis
                 arr.right!
+            .. \@ (arr,pos)-> #poop & lol @ haha -> wow     --->     poop & (lol @ (haha -> wow))
+                arr.wrap!prop \type \this-binding .prop \pos pos .up!right!
 
             .. /(?:\!?\-)?\->/ (arr,mat,pos)->
                 while arr.parent-prop(\type) in <[ modifier and or ]>

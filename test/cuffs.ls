@@ -441,6 +441,41 @@ describe 'Cuffs' ->
             n '(String, ..., Number) --> '
             n '(String, ...Integer, Number) !--> '
 
+        describe 'Checking `this` on a function' ->
+            o 'SomeClass @ Function' (force)->
+                class SomeClass
+                    ->
+                        @foo = 5
+
+                    bar: force -> @foo
+
+                S = new SomeClass
+                expect(S.bar!)to.equal 5
+                expect(SomeClass::bar)to.throw Error
+
+            o 'SomeClass @ (!Number,!Number) -> Number' (force)->
+                class SomeClass
+                    ->
+                        @foo = 5
+
+                    bar: force (a,b)-> @foo + a + b 
+
+                S = new SomeClass
+                expect(S.bar \1 \5)to.equal 11
+
+
+            o 'SomeClass @ ((!Number,!Number) --> Number)' (force)->
+                class SomeClass
+                    ->
+                        @foo = 5
+
+                    bar: force (a,b)-> @foo + a + b 
+
+                S = new SomeClass
+                expect(S.bar \1 \5)to.equal 11
+                expect(S.bar(\2)(\4))to.equal 11
+
+
     describe 'Custom Types' ->
         they 'should be able to add custom types based on functions' ->
             OO2 = Cuffs do
