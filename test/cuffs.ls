@@ -475,6 +475,17 @@ describe 'Cuffs' ->
                 expect(S.bar \1 \5)to.equal 11
                 expect(S.bar(\2)(\4))to.equal 11
 
+            o '{foo: Number, ...} @ ((!Number,!Number) !--> Number)' (force)->
+                class SomeClass
+                    ->
+                        @foo = 5
+
+                    bar: force (a,b)-> @foo + a + b 
+
+                S = new SomeClass
+                expect(S.bar \1 \5)to.equal 11
+                expect(S.bar(\2)(\4))to.equal 11
+
 
     describe 'Custom Types' ->
         they 'should be able to add custom types based on functions' ->
