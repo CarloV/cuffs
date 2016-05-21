@@ -53,7 +53,8 @@ repository:
 	type: \git
 	url: "https://github.com/CarloV/cuffs.git"
 
-dependencies: {}
+dependencies: 
+	'harmony-proxy': '>= 1.0.1'
 
 dev-dependencies: 
 	mocha: 		'>= 2.4.5'
@@ -63,7 +64,6 @@ dev-dependencies:
 	'uglify-js': 	'>= 2.6.2'
 	istanbul: 	'>= 0.4.3'
 	rimraf: 	'>= 2.5.2'
-	'harmony-proxy': '>= 1.0.1'
 	replace: '>= 0.3.0'
 
 scripts:
