@@ -260,7 +260,7 @@ function ProxyShim(target, handler) {
   id = function(it){
     return it;
   };
-  version = '0.0.2';
+  version = '0.0.3';
   $typeof = function(a){
     var that, mat;
     if (!(a != null && a.constructor != null)) {
@@ -579,7 +579,7 @@ function ProxyShim(target, handler) {
       return arr.arr;
     };
     parseToFunction = function(arr, err){
-      var e, sf, g, prelimCheck, na, ks, typed, ellipsis, i$, len$, a, ellipsii, j, fa, la, to$, i, ell, u, ref$, ret, base, arity, fs, res$, _curryHelper, that, k, v, r, that$, vt;
+      var e, sf, g, prelimCheck, na, ks, typed, ellipsis, i$, len$, a, ellipsii, j, fa, la, to$, i, ell, u, ref$, ret, base, arity, fs, res$, _curryHelper, that, k, v, r, that$, vt, tf, cf;
       e = err(arr.pos || 0, arr.closePos || arr.pos || 0);
       sf = function(u){
         switch ($typeof(u)) {
@@ -870,7 +870,7 @@ function ProxyShim(target, handler) {
             u.type = 'tuple';
             arity = u.length;
             res$ = [];
-            for (i$ = 0, to$ = u.length; i$ < to$; ++i$) {
+            for (i$ = 0; i$ < arity; ++i$) {
               i = i$;
               res$.push(sf(u[i]));
             }
@@ -881,7 +881,7 @@ function ProxyShim(target, handler) {
                   e("Not a Function");
                 }
                 return function(){
-                  var args, i$, to$, i, ps, this$ = this;
+                  var args, i$, to$, i, ps, narg, res$, this$ = this;
                   args = slice$.call(arguments);
                   if (args.length === 0) {
                     for (i$ = 0, to$ = arity; i$ < to$; ++i$) {
@@ -894,16 +894,18 @@ function ProxyShim(target, handler) {
                     if (ps.length > arity) {
                       e('Incorrect arity of curried arrow, received #{params.length} arguments and should be #{arity} arguments');
                     }
+                    res$ = [];
                     for (i$ = 0, to$ = ps.length; i$ < to$; ++i$) {
                       i = i$;
-                      fs[i](ps[i]);
+                      res$.push(fs[i](ps[i]));
                     }
+                    narg = res$;
                     if (ps.length < arity) {
                       return function(){
-                        return _curryHelper(ps)(fun.apply(this$, args)).apply(this$, arguments);
+                        return _curryHelper(ps)(fun.apply(this$, narg.slice(params.length, ps.length))).apply(this$, arguments);
                       };
                     } else {
-                      return ret(fun.apply(this, args));
+                      return ret(fun.apply(this, narg.slice(params.length, ps.length)));
                     }
                   }
                 };
@@ -967,6 +969,18 @@ function ProxyShim(target, handler) {
           };
         }
         break;
+      case 'this-binding':
+        tf = sf(arr[0]);
+        cf = sf(arr[1]);
+        return function(fun){
+          var h;
+          h = cf(fun);
+          return function(){
+            var b;
+            b = slice$.call(arguments);
+            return h.apply(tf(this), b);
+          };
+        };
       case 'string':
       case 'number':
         return function(it){
@@ -1048,6 +1062,9 @@ function ProxyShim(target, handler) {
         arr.parentProp('type', 'tuple');
       }
       return arr.right();
+    });
+    y$('@', function(arr, pos){
+      return arr.wrap().prop('type', 'this-binding').prop('pos', pos).up().right();
     });
     y$(/(?:\!?\-)?\->/, function(arr, mat, pos){
       var ref$;

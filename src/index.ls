@@ -1,6 +1,6 @@
 require! {'./multi-array-explorer': {MultiArrayExplorer}}
 id = -> it
-version = \0.0.2
+version = \0.0.3
 #idea
 #you force a type on a structure
 #it gives an error whenever a structure fails (even async)

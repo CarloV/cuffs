@@ -1,6 +1,6 @@
 {
   "name": "cuffs",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "author": "Carlo Verschoor",
   "description": "Cuffs is a library that gives you authority over your javascript values. It let's you check, cast and fix a javascript value to a certain type.",
   "keywords": [
