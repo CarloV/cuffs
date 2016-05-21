@@ -464,7 +464,7 @@ describe 'Cuffs' ->
                 expect(S.bar \1 \5)to.equal 11
 
 
-            o 'SomeClass @ ((!Number,!Number) --> Number)' (force)->
+            o 'SomeClass @ ((!Number,!Number) !--> Number)' (force)->
                 class SomeClass
                     ->
                         @foo = 5
