@@ -53,10 +53,10 @@ OO('{foo: String, bar: Number,...Boolean}',{foo:'baz',bar:1,baz:5});		//Error
 //Typed Objects
 OO('RegExp{source: String, ...}', /foo/)					// /foo/
 OO('RegExp{source: String, ...}', {source: 'foo'})		// Error
-OO('[Array | String]{length: 5,...}', [1,2,3,4,5])		// [1,2,3,4,5]
-OO('[Array | String]{length: 5,...}', 'abcde')			// 'abcde'
-OO('[Array | String]{length: 5,...}', 12345)				// Error
-OO('[Array | String]{length: 5,...}', [1,2,3,4])			// Error
+OO('(Array | String){length: 5,...}', [1,2,3,4,5])		// [1,2,3,4,5]
+OO('(Array | String){length: 5,...}', 'abcde')			// 'abcde'
+OO('(Array | String){length: 5,...}', 12345)				// Error
+OO('(Array | String){length: 5,...}', [1,2,3,4])			// Error
 
 //Functions, if correct, this returns a function that is forced on the arguments and return value
 var func = OO('(String, String) -> String',function(a,b){return a + b});
