@@ -88,14 +88,14 @@ func5(5)()(); 		//Error
 
 //Force even more complex statements
 var obj = OO('{foo: String -> String, bar: (!Number, !Number) -> Number}',{foo: function(a){return a + "!"},bar: function(a,b){return a + b}})
-obj.foo(\lol); 		 //lol!
+obj.foo('lol');      //lol!
 obj.bar('1','2'); 	 //3
 obj.foo(0);			 //Error
 obj.bar('1','2','3') //Error
 ```
 
 ## Examples when proxies are turned on
-**Note: in node.js you need to turn on the harmony_proxies flag to let this work. And depending on whether old-style proxies are used you need to install the harmony-proxy shim.** <br/>
+**Note: in node.js you need to turn on the harmony_proxies flag to let this work.** <br/>
 **Note: for browser usage, check out http://caniuse.com/#feat=proxy which browsers are supported**
 
 ```js
@@ -169,3 +169,180 @@ class Dog
         !-> @age
 ```
 
+##Fast Syntax Description
+
+### Introduction
+The idea is pretty simple, we can describe a javascript type by a string containing certain symbols and words. If we then force a javascript value to act like it does in the description two things can happen.
+
+- A new value is returned representing the forced javascript value with respect to the described type.
+- An error occurs, as we can't force that type on the specific value.
+
+In all cases the old value remains untouched, we only return a new value that will behave the way you want it to behave.
+
+For an advanced overview of what is possible, see the test file for more examples or try to read the source.
+
+### Literals
+The most standard form of type checking is done through literals, such as `String`, `Number`, `Boolean`, `Object`, etc. Basically it comes down to letting the literal match the constructor's name (even custom constructors). There are several ways to do this, and depending on the environment you are in, some things work and some don't, so multiple backups are in place to ensure we pick it as good as possible. Basic usage is as follows:
+
+```js
+// Things that work
+OO( 'String' , 'Some String' ); // 'Some String.'
+OO( 'Number' , 5 );             // 5
+
+// Things that don't work
+OO( 'String' , 5);              // Error
+OO( 'Number' , '5');            // Error
+```
+
+Apart from the basic literals, there are some special literals built in, which overwrite the basic usage. 
+- `Integer` - Checks numbers that are integer
+- `NaN` - Checks for something that is Not a Number
+- `Truthy` - Checks for truthy values
+- `Untruthy` - Checks for untruthy values
+- `Existent` - Checks for existing values
+- `Inexistent` - Checks for inexistent values
+- `All` or `*` - Matches anything
+
+Also any custom type literals you define will be treated as special literal.
+
+If you have a literal that contains weird symbols or part of an operation then you may use the `<Literal>` syntax.
+
+Then there are value-literals, Numbers are recognized as being numbers and strings between quotations as literal string values.
+
+### Arrays and Tuples
+
+We can force array-like structures by using the square brackets `[]` or parenthesis `()`, the first is used for array sequences and the latter for tuples. In between square brackets one can only put one type, this type will be used to force on any value inside the array. When you leave a square bracket empty, it is regarded as being an empty array.
+
+```js
+//Example for array sequences that work
+OO( '[String]' , ["test","this","thing"]); //["test","this","thing"]
+OO( '[Number]' , [1, 2, 3, 4, 5]);         //[1, 2, 3, 4, 5]
+
+```
+
+Note that here array sequences are length independent, this is different for tuples. Here we force an array of fixed length of types seperated by a comma.
+```js
+//Example for tuples that work
+OO( '(String, Number, Boolean)', ["foo", 0, true] );              // ["foo", 0, true]
+OO( '(Number, Number, Number, Number, Number)', [1, 2, 3, 4, 5]); // [1,2,3,4,5]
+OO( '(*,*)', ["snow","man"]);                                     // ["snow","man"]
+```
+
+Tuples of length one are distinguished by putting a single comma at the end of the tuple. For example `(Number,)` would be a tuple of length 1. If we leave out the comma the parser thinks we are just looking for a `Number` instead of an tuple that contains a number. Tuples of length zero can be created in two ways, namely `[]` or `()`.
+
+### Objects
+
+Forcing object-like structures is also possible using curled braces `{}`. Inside the object is a comma-seperated list of `key:type` statements with the possible inclusion of an ellipsis `...`. The key being a string, and the type being anything.
+
+```js
+//Example for objects that work
+OO( '{foo:String, bar:Number}', {foo: "baz", bar: 12345});
+OO( '{nope:Inexistent, yep: Existent}', {yep: true});
+```
+
+#### Ellipsis
+The ellipsis argument can only be used once in an object. It comes in two variants, either we use the ellipsis bare `...` or we use it with a type `...Type`. Bare usage is a synonym for `...All`, meaning that any other key will be allowed regardless of their value. When Type is given all values not represented by a key in the object-type will be forced to that Type.
+
+```js
+//Example for objects that work with ellipsis
+OO( '{foo:String, bar:Number, ...}', {foo: "baz", bar: 12345, baz: "This can be anything now"});
+OO( '{nope:Inexistent, yep: Existent, ...String}', {yep: true, foo: "This can only be a string now", bar: "This one as well"});
+```
+
+#### Typed Objects
+We can prepend any object-type with an other type, basically a shortcut for the And-operator.
+
+```js
+//Examples of typed objects
+OO( 'String{length: 3, ...}', 'abc');
+OO( 'Array{length: 2, ...}', ["one", 2]); //note: this is the same type as the snowman, but then more explicit (*,*)
+```
+
+### Modifiers and Operations
+
+#### Or
+Loosen your cuffs! There is an Or-operator, denoted by `|`, so you can have a bit more freedom in cuffing a type. The examples speak for themselves.
+
+```js
+//Example of the |-operator
+OO( 'String | Number', 5);              // 5
+OO( 'String | Number', '5');            // '5'
+OO( 'String | Number | Boolean', true); // true
+```
+
+In general, just like with binary OR, the first type to return a truthy value is returned
+
+#### And
+Stiffen your cuffs! There is an And-operator, denoted by `&`, so you can keep your type locked up tight. It is unusual to use this, but there can be several usecases in which this comes handy, certainly when having overlapping custom types.
+
+```js
+//Examples of the &-operator
+OO( 'Number & Not Integer', 3.14);              // 3.14
+OO( 'Number & Truthy', 123);                    // 123
+OO( 'Boolean & Truthy', true);                  // true
+OO( 'Array & {length: 2, ...}', ["one", 2]);    // ["one",2]
+```
+
+#### Maybe
+Doubt your cuffs! There is a Maybe-modifier! But it is not that special, `Maybe Type` is a synonym for `Inexistent | Type`
+
+#### Not
+Throw away your cuffs! There is a Not-modifier!
+**Note that this doesn't work nested into arrows, castings and proxies, so be cautious with this one**
+
+### Casts
+
+At the moment only a few simple casts are supported (as special literals), they are `!String`, `!Number`, `!Integer`, `!Boolean` and `!Date`. They receive a value and cast it, and then return a new value (if possible). One may define casts through custom types as well!
+
+### Arrows
+
+#### Basic Arrows `->`
+
+The basic usage comes in a few variants. We have hushed arrows `Something Here ->`, we have arrows that are blind `-> ReturnType`, but also combinations `->` and `(Type1, Type2) -> ReturnType`. On the right of an arrow we put a return type, this can be basically anything. On the left of an arrow we put a tuple (which may contain one ellipsis), or a single type (if the function has one argument).
+
+#### Curried Arrows `-->` and `!-->`
+
+Usage for curry `-->` is the same as for normal arrows, but here we assume the cuffed value is a curried arrow. Mostly this is not the case, so we need to cast the curry, which can be done with `!-->`
+
+#### Cuffing `this`
+
+to specify a type for `this`, one can use the `@` operator.
+
+### Comments
+
+You can do one word comments with `#small-comment`, and multiline and multispace comments using the ordinary `/* some comment */` syntax. Any comment and whitespace will just get ignored by the parser, unless you use a whitespace in a custom type (which is not recommended).  
+
+### Proxies
+
+As seen in the examples the usage of proxies doesn't affect the syntaxis. It only solidifies your cuffs.
+
+### Custom Types
+
+Custom types are treated like special literals. There are a few ways to define a custom type, one can use custom types as being a macro for a different type, or you can define them from stratch using your own validation. Then there are a few ways to implement these custom types into the cuffs. Here just a basic way to add custom types, for more ways or to combine custom types check out the test file or source code.
+
+```js
+var OO = require('cuffs')({customTypes:{
+    //Adding custom types using other types
+    Empty: '[ Inexistent ]',
+    Nothing: 'Not All',
+    Character: 'String{length: 1, ...}',
+    Poop: '"Poop" | "poop"',
+
+    //Adding custom types in a more elaborate way
+    Wordlike: function(err,value){if (/\w+/.test(value)){return value} else {err('Not wordlike')}}
+
+    //Adding custom types the hard way
+    Foo: function(err){return function(value){if (value.toLowerCase() == "foo") {return value} else {err('Where is the foo?')}}},
+    "!Foo": function(err){return function(value){if (value.toLowerCase() == "foo") {return value} else {return "Foo"}}},
+
+    //Adding custom types an even harder way using regexes
+    "/Plus(\\d+)/": function(mat){return function(err){return function(value){return value + +mat[1]}}}
+}});
+
+
+//Then you can use them
+OO( 'Poop', "Poop" );                            //"Poop"
+OO( 'Character & Wordlike', "A");                //"A"
+OO( 'Foo', OO('!Foo' , "Something Random" ) );   //"Foo"
+OO( 'Plus5', 3);                                 //8
+```
