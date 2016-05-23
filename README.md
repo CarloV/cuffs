@@ -393,11 +393,11 @@ a.toString();       //Error
 //It also looks nice when you define a binary operator in SomeClass
 SomeClass.prototype.add = OO(
     'SomeClass @ SomeClass -> SomeClass',
-    function(otherClass){
-        var returnClass = new SomeClass;
-        returnClass.foo = this.foo + otherClass.foo;
-        returnClass.bar = this.bar + otherClass.bar;
-        return returnClass;
+    function(otherObject){
+        var returnObject = new SomeClass;
+        returnObject.foo = this.foo + otherObject.foo;
+        returnObject.bar = this.bar + otherObject.bar;
+        return returnObject;
     }
 );
 
