@@ -440,8 +440,17 @@ var OO = require('cuffs')({customTypes:{
 
 
 //Then you can use them
-OO( 'Poop', "Poop" );                            //"Poop"
-OO( 'Character & Wordlike', "A");                //"A"
-OO( 'Foo', OO('!Foo' , "Something Random" ) );   //"Foo"
-OO( 'Plus5', 3);                                 //8
+OO( 'Poop', "Poop" );                            // "Poop"
+OO( 'Character & Wordlike', "A");                // "A"
+OO( 'Foo', OO('!Foo' , "Something Random" ) );   // "Foo"
+OO( 'Plus5', 3);                                 // 8
+
+//And we can add more custom types, or remove custom types
+OO.modify-types({
+    Letter: "Character & Wordlike",
+    Poop: false //this removes Poop
+});
+
+OO('Letter', "A");  // "A"
+OO('Poop', "Poop"); // Error
 ```
