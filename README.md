@@ -446,7 +446,7 @@ OO( 'Foo', OO('!Foo' , "Something Random" ) );   // "Foo"
 OO( 'Plus5', 3);                                 // 8
 
 //And we can add more custom types, or remove custom types
-OO.modify-types({
+OO.modifyTypes({
     Letter: "Character & Wordlike",
     Poop: false //this removes Poop
 });
