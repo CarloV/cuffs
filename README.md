@@ -228,7 +228,7 @@ OO( '(Number, Number, Number, Number, Number)', [1, 2, 3, 4, 5]); // [1,2,3,4,5]
 OO( '(*,*)', ["snow","man"]);                                     // ["snow","man"]
 ```
 
-Tuples of length one are distinguished by putting a single comma at the end of the tuple. For example `(Number,)` would be a tuple of length 1. If we leave out the comma the parser thinks we are just looking for a `Number` instead of an tuple that contains a number. Tuples of length zero can be created in two ways, namely `[]` or `()`.
+Tuples of length one are distinguished by putting a single comma at the end of the tuple. For example `(Number,)` would be a tuple of length 1. If we leave out the comma the parser thinks we are just looking for a `Number` instead of a tuple that contains a number. Tuples of length zero can be created in two ways, namely `[]` or `()`.
 
 ### Objects
 
@@ -294,19 +294,118 @@ Throw away your cuffs! There is a Not-modifier!
 
 At the moment only a few simple casts are supported (as special literals), they are `!String`, `!Number`, `!Integer`, `!Boolean` and `!Date`. They receive a value and cast it, and then return a new value (if possible). One may define casts through custom types as well!
 
+```js
+//Examples of casts
+OO( '!Number', '5' );   // 5
+OO( '!Boolean', 12345 ); // true
+OO( '!String', 12345 );  // "12345"
+```
+
 ### Arrows
 
 #### Basic Arrows `->`
 
-The basic usage comes in a few variants. We have hushed arrows `Something Here ->`, we have arrows that are blind `-> ReturnType`, but also combinations `->` and `(Type1, Type2) -> ReturnType`. On the right of an arrow we put a return type, this can be basically anything. On the left of an arrow we put a tuple (which may contain one ellipsis), or a single type (if the function has one argument).
+The basic usage comes in a few variants. We have hushed arrows `Something Here ->`, we have arrows that are blind `-> ReturnType`, but also combinations `->` and `(Type1, Type2) -> ReturnType`. On the right of an arrow we put a return type, this can be basically anything. On the left of an arrow we put a tuple (which may contain one typed ellipsis), or a single type (if the function has one argument).
+
+```js
+//Examples of arrows
+var f = OO( '-> String', function(){return "Some String"});
+f(); //"Some String"
+
+var scream = OO( '!String -> String', function(str){return str.toUpperCase() + "!!!"});
+scream("hello"); // "HELLO!!!"
+scream( 12345 ); // "12345!!!"
+
+var addAsNumbers = OO( '(!Number, !Number) -> Number', function(a,b){return a + b});
+addAsNumbers("12",true); // 13
+addAsNumbers(12.3,45.6); // 57.9
+
+var argumentsLength = OO( '(...) -> Number', function(){return arguments.length});
+argumentsLength(1,2,3,4,5,6,7,8); // 8
+argumentsLength();                // 0
+argumentsLength('a','b','c');     // 3
+
+var joinArguments = OO( '(String, ...!String) -> String' , function(separator){
+    var slice$ = [].slice;
+    return slice$.call(arguments, 1).join(separator);
+});
+joinArguments(' - ','a',2,'c');   // "a - 2 - c"
+```
 
 #### Curried Arrows `-->` and `!-->`
 
-Usage for curry `-->` is the same as for normal arrows, but here we assume the cuffed value is a curried arrow. Mostly this is not the case, so we need to cast the curry, which can be done with `!-->`
+Curries are functions that wait for execution until all arguments are processed. This means the amount of arguments needs to be fixed, and no ellipsis can be used.
+Usage for curry `-->` is the same as for normal arrows, but here we assume the cuffed value is a curried arrow. Mostly this is not the case, so one may want to cast the curry, which can be done with `!-->`.
+
+```js
+var addAsNumbers = OO( '(!Number, !Number) !--> Number', function(a,b){return a + b});
+//We can still use it as we did before
+addAsNumbers("12",true); // 13
+addAsNumbers(12.3,45.6); // 57.9
+
+//We can now split the function by giving it only one argument, expecting the other one later on.
+var addFive = addAsNumbers(5);
+addFive(10);    //15
+addFive("123"); //128
+
+//In this example we force execution before total arguments is reached. Note that this doesn't work for the previous function.
+var addNumbers = OO( '(Maybe Number, Maybe Number) !--> Number', function(a,b){return (a || 0) + (b || 0)});
+addNumbers(12,34);  // 46
+var addTwelve = addNumbers(12);
+addTwelve(34);      // 46
+addTwelve();        // 12
+addNumbers();       // 0
+```
 
 #### Cuffing `this`
 
-to specify a type for `this`, one can use the `@` operator.
+To specify a type for `this`, one can use the `@` operator. The syntax looks like `Type @ Function`, here Function doesn't need to be an arrow, it can also be a `Function` or any other type which you know will be a function. It explains itself well through an example.
+
+```js
+function SomeClass(){
+    this.foo = 'Foo';
+    this.bar = 'Bar';
+}
+
+SomeClass.prototype.toString = OO(
+    'SomeClass{foo:String, bar:String, ...} @ -> String', 
+    function(){ 
+        return this.foo + this.bar; 
+    }
+);
+
+SomeClass.prototype.changeFoo = OO(
+    'SomeClass{foo:String, bar:String, ...} @ String ->',
+    function(foo){ 
+        this.foo = foo 
+    }
+);
+
+var a = new SomeClass;
+a.toString();       //FooBar
+a.changeFoo("Baz");
+a.toString();       //BazBar
+
+//Of course we can still change foo to a non-string, but the cuffs will not find that funny now.
+a.foo = 12345;
+a.toString();       //Error
+
+//It also looks nice when you define a binary operator in SomeClass
+SomeClass.prototype.add = OO(
+    'SomeClass @ SomeClass -> SomeClass',
+    function(otherClass){
+        var returnClass = new SomeClass;
+        returnClass.foo = this.foo + otherClass.foo;
+        returnClass.bar = this.bar + otherClass.bar;
+        return returnClass;
+    }
+);
+
+var b = new SomeClass;
+var c = new SomeClass;
+b.add(c).toString(); //FooFooBarBar
+a.add(c).toString(); //BazFooBarBar
+```
 
 ### Comments
 
@@ -314,7 +413,7 @@ You can do one word comments with `#small-comment`, and multiline and multispace
 
 ### Proxies
 
-As seen in the examples the usage of proxies doesn't affect the syntaxis. It only solidifies your cuffs.
+As seen in the examples very much above the usage of proxies doesn't affect the syntaxis. It only solidifies your cuffs.
 
 ### Custom Types
 
