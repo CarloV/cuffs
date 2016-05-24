@@ -1,5 +1,6 @@
 require! {'./multi-array-explorer': {MultiArrayExplorer}}
 id = -> it
+YES = -> true
 version = \0.0.3
 #idea
 #you force a type on a structure
@@ -17,6 +18,12 @@ $typeof = (a)-> #this is needed to look behind a shimmed Proxy
         if mat and mat.length == 2
             return mat.1
     return typeof! a
+
+shallow-copy = (obj)->
+        nobj = {}
+        for k,v of obj
+            nobj[k] = v 
+        nobj
 
 lits =
     Integer:   (err)-> -> if $typeof(it) is \Number and Math.floor(it) is it    then it else err 'Not an Integer'
@@ -171,15 +178,48 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
             go-down arr, SL - 1
         arr.arr
 
-    parse-to-function = (arr,err)->
+    parse-to-function = (arr,err,parent-polymf = YES,temp_polym = {})->
         e = err(arr.pos || 0, arr.close-pos || arr.pos || 0)
 
-        sf = (u)->
+        _temp_polym = {}
+        clean = -> 
+            _temp_polym := shallow-copy temp_polym
+        clean!
+
+        polymf = (ltr,typ)-> #note that with this construction, proxies will not recognize polymorphisms (unless the proxy checks the whole structure again instead of the single value that is added)
+            #console.log arr.type,ltr,typ,_temp_polym,temp_polym
+            if _temp_polym[ltr]?
+                return that is typ
+
+            ppmf = parent-polymf(ltr,typ)
+            _temp_polym[ltr] = typ if ppmf is true
+            return ppmf
+
+        polymf-force = (ltr,typ)->
+            #console.log arr.type,ltr,typ,_temp_polym,temp_polym
+            if _temp_polym[ltr]?
+                return that is typ
+
+            _temp_polym[ltr] = typ
+            return true
+
+        sf = (u,pmf = polymf)->
             switch $typeof u
-            | \Array => return parse-to-function u, err
+            | \Array => return parse-to-function u, err, pmf, shallow-copy _temp_polym
             | \Function => return u e
             | _ => return lits.Inexistent e #only Undefined will be here
 
+        <- (x) ->
+            r = x!
+            -> 
+                try
+                    R = r ...
+                catch
+                    clean!
+                    throw e 
+                clean!
+                R
+                
         switch arr.type 
         | \parenthesis => 
             if arr.length == 0
@@ -197,6 +237,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                 new prox do 
                     O 
                     set: (target, prop, val, recv)->
+                        #TODO: add a new total check solely for polymorphisms
                         if isNaN prop or +prop < 0 or (+prop)%1 isnt 0
                             target[prop] = val
                             return true
@@ -248,6 +289,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                 new prox do 
                     O 
                     set: (target, prop, val, recv)->
+                        #TODO: add a new total check solely for polymorphisms
                         if na[prop]?
                             target[prop] = that val
                         else if ellipsis != false
@@ -258,6 +300,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                         true
 
                     deleteProperty: (target,prop)->
+                        #TODO: add a new total check solely for polymorphisms
                         if na[prop]?
                             tv = that void
                             if tv?
@@ -270,10 +313,11 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
 
 
         | \tuple =>
+            preev = [sf arr[i] for i til arr.length]
             prelim-check = (v)-> 
                 e 'Not an Array' unless v instanceof Array #if proxy is shimmed the typeof! doesnt work properly anymore
                 e "Tuple length doesn't match" if v.length isnt arr.length
-                [sf(arr[i])(v[i]) for i til v.length]
+                [preev[i] v[i] for i til v.length]
 
             return prelim-check unless use-proxies
             return (o)->
@@ -281,6 +325,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                 new prox do 
                     O 
                     set: (target, prop, val, recv)->
+                        #TODO: add a new total check solely for polymorphisms
                         if prop is \length
                             e "Tuple length doesn't match" unless val == arr.length 
                             target[prop] = val
@@ -290,15 +335,16 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                             target[prop] = val
                             return true
 
-                        target[prop] = sf(arr[prop])(val)
+                        target[prop] = preev[prop] val
                         true
 
                     deleteProperty: (target,prop)->
+                        #TODO: add a new total check solely for polymorphisms
                         if isNaN prop or +prop < 0 or (+prop)%1 isnt 0
                             delete target[prop]
                             return true
                         
-                        target[prop] = sf(arr[prop])(void)
+                        target[prop] = preev[prop](void)
                         return true
 
         | \argument-tuple =>
@@ -307,9 +353,10 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
             else 
                 ellipsii = [a for a in arr when a? and a.type is \ellipsis]length
                 if ellipsii == 0
+                    preev = [sf arr[i] for i til arr.length]
                     return (v)-> 
                         e "Argument Tuple length doesn't match" if v.length isnt arr.length
-                        [sf(arr[i])(v[i]) for i til arr.length]
+                        [preev[i] v[i] for i til arr.length]
 
                 else if ellipsii == 1
                     j = 0
@@ -347,20 +394,26 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                 u = arr.0
             else if arr.0?
                 u = [arr.0]
-            
-            ret = sf arr.1
 
+            a1 = arr.1
             base = (fun,g)->
                 (...b)->
                     b = g b
-                    ret fun.apply @, b
+                    #TODO (also in curry): cleaning may fail after an error in the return statement, so delay the error until after cleaning
+                    try
+                        r = sf a1, polymf-force <| fun.apply @, b #return value will get the dirty _temp_polym, to save asyncness of polymorphisms
+                    catch
+                        clean!
+                        throw e
+                    clean!
+                    r
 
             switch arr.arrow-type
             | \--> \!--> => 
                 if u.length > 1
                     u.type = \tuple 
                     arity = u.length
-                    fs = [sf u[i] for i til arity]
+                    fs = [sf u[i], polymf-force for i til arity]
                     _curry-helper = (params)->
                         (fun)-> 
                             e "Not a Function" unless $typeof(fun) is \Function
@@ -368,15 +421,33 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                                 if args.length is 0 #execute the curry
                                     for i til arity
                                         fs[i] params[i] #last check
-                                    ret fun.apply @
+                                    try
+                                        r = sf a1, polymf-force <| fun.apply @ #return value will get the dirty _temp_polym, to save asyncness of polymorphisms
+                                    catch
+                                        clean!
+                                        throw e
+                                    clean!
+                                    r
                                 else #continue currying
                                     ps = params ++ args
                                     e 'Incorrect arity of curried arrow, received #{params.length} arguments and should be #{arity} arguments' if ps.length > arity
-                                    narg = [fs[i] ps[i] for i til ps.length]
-                                    if ps.length < arity    
+                                    if ps.length < arity  
+                                        try
+                                            narg = [fs[i] ps[i] for i til ps.length]
+                                        catch 
+                                            clean!
+                                            throw e
+                                        clean! #narg has checked polymorphisms again, so clean them in the arrow
                                         return ~> _curry-helper(ps)(fun.apply @, narg.slice params.length,ps.length) ...
                                     else
-                                        return ret fun.apply @, narg.slice params.length,ps.length
+                                        try
+                                            narg = [fs[i] ps[i] for i til ps.length]
+                                            r = sf a1, polymf-force <| fun.apply @, narg.slice params.length,ps.length #return value will get the dirty _temp_polym, to save asyncness of polymorphisms
+                                        catch
+                                            clean!
+                                            throw e
+                                        clean!
+                                        return r
                     if arr.arrow-type is \--> #only check arguments, but don't curry the function
                         return _curry-helper []
                     else #otherwise we do curry the function
@@ -387,7 +458,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
       
             | _ =>
                 u.type = \argument-tuple
-                g = sf u
+                g = sf u, polymf-force
                 return (fun)-> 
                     e "Not a Function" unless $typeof(fun) is \Function
                     base fun,g
@@ -435,7 +506,16 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
 
         | \string \number => 
             return -> if it is arr.0 then it else e "The #{arr.type} #{it} is unequal to #{arr.0}"
+
+        | \polymorphism =>
+            return (v)->
+                if polymf arr.0, $typeof v
+                    return v
+                else
+                    throw new Error "Polymorphism #{arr.type} can't match multiple types"
+
         | _ => throw new Error "Can't parse type #{arr.type} in this context"
+
 
     ((m,k,f)-->
         modes[m] = [] unless modes[m]?
@@ -492,6 +572,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
             .. \' (arr,pos)-> arr.set [] .prop \type \string .prop \mode \string .prop \stringType \' .prop \pos pos .up!
             .. /\d+(?:\,\d+)?|\-?Infinity/ (arr,mat,pos)-> arr.set [+mat.0] .prop \type \number .prop \pos pos .prop \closePos pos + mat.0.length
             .. \... (arr,pos)-> arr.set [] .prop \type \ellipsis .prop \pos pos .up!
+            .. /[a-z]\b/ (arr,mat,pos)-> arr.set [mat.0] .prop \type \polymorphism .prop \pos pos .prop \closeProp pos + 1
             .. [k for k of modifiers] (arr,val,pos)-> arr.set [] .prop \type \modifier .prop \pos pos .up!set modifiers[val] .right!
             .. \* (arr,pos)-> arr.set [\*] .prop \type \literal .prop \pos pos .prop \closePos pos + 1
             .. /[!\?$_\w]+\b/  (arr,val,pos)-> arr.set [val.0] .prop \type \literal .prop \pos pos .prop \closePos pos + val.0.length
