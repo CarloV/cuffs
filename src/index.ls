@@ -187,7 +187,6 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
         clean!
 
         polymf = (ltr,typ)-> #note that with this construction, proxies will not recognize polymorphisms (unless the proxy checks the whole structure again instead of the single value that is added)
-            #console.log arr.type,ltr,typ,_temp_polym,temp_polym
             if _temp_polym[ltr]?
                 return that is typ
 
@@ -196,7 +195,6 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
             return ppmf
 
         polymf-force = (ltr,typ)->
-            #console.log arr.type,ltr,typ,_temp_polym,temp_polym
             if _temp_polym[ltr]?
                 return that is typ
 
@@ -219,7 +217,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                     throw e 
                 clean!
                 R
-                
+
         switch arr.type 
         | \parenthesis => 
             if arr.length == 0
