@@ -502,7 +502,7 @@ describe 'Cuffs' ->
             <- they 'should recognize the type ' + t 
             f OO t  
 
-        describe.only 'Polymorphisms' ->
+        describe 'Polymorphisms' ->
             o 'a'               [0 \0 {} [] true, undefined, void ->]
             o '(a,b)'           [['a',0]                                [true,{}]]
             o '(a,a)'           [['a','b'], [1,2], [true, false]]       [['a',0], [true,{}]]
