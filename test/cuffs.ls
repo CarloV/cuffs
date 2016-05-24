@@ -573,6 +573,16 @@ describe 'Cuffs' ->
                 expect(-> f(\1)(2))to.throw Error
                 expect(f(1)(2)(3))to.equal 6 #extra test due to caching of polymorphisms and error-handling
 
+            q '(a, Maybe a) !--> a' (force)->
+                f = force (a,b) -> a + (b || 0)
+                expect(f(2,4))to.equal 6
+                expect(f(2)(4))to.equal 6
+                expect(f(6)!)to.equal 6
+                expect(-> f(\1)(5))to.throw Error
+                expect(-> f(true)!)to.throw Error
+                expect(f(6)!)to.equal 6
+
+
     describe 'Custom Types' ->
         they 'should be able to add custom types based on functions' ->
             OO2 = Cuffs do
