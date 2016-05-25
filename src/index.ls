@@ -18,6 +18,12 @@ $typeof = (a)-> #this is needed to look behind a shimmed Proxy
             return mat.1
     return typeof! a
 
+shallow-copy = (obj)->
+    nobj = {}
+    for k,v of obj
+        nobj[k] = v 
+    nobj
+
 lits =
     Integer:   (err)-> -> if $typeof(it) is \Number and Math.floor(it) is it    then it else err 'Not an Integer'
     NaN:       (err)-> -> if is-NaN it                                          then it else err 'Not a Not a Number' 
@@ -50,34 +56,6 @@ modifiers =
         catch
             return v
         err 'Not Not'
-
-or-helper =
-    (e,A,B)-> ->
-        try
-            Af = A ...
-        catch {message}
-            m1 = message
-            _Af = false
-        
-        try
-            Bf = B ...
-        catch {message}
-            m2 = message
-            _Bf = false
-
-        if _Af == false and _Bf == false
-            throw new Error m1 + ' And ' + m2
-        else if _Af == false and _Bf != false
-            return Bf
-        else if _Bf == false and _Af != false
-            return Af 
-        else if $typeof(Af) is \Function and $typeof(Bf) is \Function
-            return or-helper e, Af,Bf
-        else #2 answers, then we just or them as usual
-            return Af || Bf
-
-and-helper =
-    (e, A,B)-> -> B A ...
 
 Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})-> 
     modes = {}
@@ -171,25 +149,58 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
             go-down arr, SL - 1
         arr.arr
 
-    parse-to-function = (arr,err)->
+    parse-to-function = (arr,err,poly_temp = {}, poly_delegates = [], poly_cleans = [], done)->
         e = err(arr.pos || 0, arr.close-pos || arr.pos || 0)
 
-        sf = (u)->
+        unless done?
+            _tot_cleans = 0
+            _poly_temp = shallow-copy poly_temp
+            done = !->
+                _tot_cleans++
+                if _tot_cleans is poly_cleans.length
+                    #console.log \CLEAN, _tot_cleans, poly_cleans, _poly_temp, poly_temp
+                    temp_poly_temp = shallow-copy poly_temp
+                    poly_temp := shallow-copy _poly_temp
+                    poly_delegates := []
+                    poly_cleans := []
+                    _tot_cleans := 0
+                    #for c in poly_cleans => c!
+                    for d in poly_delegates => d temp_poly_temp, [] ,[] #the empty arrays must be defined here, so they keep being shared among all types
+                    
+        polymf = (ltr,typ)->
+            #console.log ltr,typ, poly_temp
+            return that is typ if poly_temp[ltr]?
+            poly_temp[ltr] = typ 
+            true
+
+
+        sf = (u, pt = poly_temp, pd = poly_delegates, pc = poly_cleans)->
             switch $typeof u
-            | \Array => return parse-to-function u, err
+            | \Array => return parse-to-function u, err, pt, pd, pc, done
             | \Function => return u e
             | _ => return lits.Inexistent e #only Undefined will be here
+
+        <- (x) ->
+            R = x!
+            ->
+                poly_cleans.push arr.type
+                #console.log \IN arr.type, JSON.stringify(poly_temp), JSON.stringify(_poly_temp), poly_temp is _poly_temp
+                r = R ...
+                #console.log \OUT arr.type, JSON.stringify(poly_temp), JSON.stringify(_poly_temp), poly_temp is _poly_temp
+                done!
+                r
 
         switch arr.type 
         | \parenthesis => 
             if arr.length == 0
                 return -> if $typeof it is \Array and it.length == 0 then it else e 'Not an empty Tuple'
-            sf arr.0
+            (v)->
+                sf arr.0 <| v
+
         | \array =>
-            g = sf arr.0
             prelim-check = (v)-> 
                 e 'Not an Array' unless v instanceof Array #if proxy is shimmed the typeof! doesnt work properly anymore
-                [g .. for v]
+                [sf(arr.0) .. for v]
 
             return prelim-check unless use-proxies
             return (o)->
@@ -200,42 +211,42 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                         if isNaN prop or +prop < 0 or (+prop)%1 isnt 0
                             target[prop] = val
                             return true
-                        target[prop] = g val
+                        target[prop] = sf(arr.0) val
                         true
 
         | \object =>
             na = {}
             ks = []
-            typed = sf lits\*
+            typed = lits\*
             ellipsis = false
             for a in arr
                 if $typeof(a) is \String
                     let k = a
                         ks.push k
-                        na[k] = sf lits.Existent
+                        na[k] = lits.Existent
                     continue
                 switch a.type
                 | \property => let k = a.0, v = a.1
                     ks.push k
                     if !v?
-                        na[k] = sf lits.Existent
+                        na[k] = lits.Existent
                     else
                         #sv = sf v
-                        na[k] = sf v#(o,O)-> O[k] = sv o[k]]
-                | \object-type => typed = sf a.0
+                        na[k] = v#(o,O)-> O[k] = sv o[k]]
+                | \object-type => typed = a.0
                 | \ellipsis =>
                     if a.length == 0
-                        ellipsis = id
+                        ellipsis = -> id
                     else
-                        ellipsis = sf a.0
+                        ellipsis = a.0
 
             prelim-check = (o)->
-                O = typed o 
+                O = sf typed <| o 
                 for k,n of na 
-                    O[k] = n o[k]
+                    O[k] = sf n <| o[k]
                 if ellipsis != false
                     for k of o when k not in ks
-                        O[k] = ellipsis o[k]
+                        O[k] = sf ellipsis <| o[k]
                 else
                     for k of o when k not in ks
                         e "Didn't expect the key #k inside the object"
@@ -249,9 +260,9 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                     O 
                     set: (target, prop, val, recv)->
                         if na[prop]?
-                            target[prop] = that val
+                            target[prop] = sf that <| val
                         else if ellipsis != false
-                            target[prop] = ellipsis val
+                            target[prop] = sf ellipsis <| val
                         else
                             e "Key can't be inside this object"
                             #return false
@@ -259,7 +270,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
 
                     deleteProperty: (target,prop)->
                         if na[prop]?
-                            tv = that void
+                            tv = sf that <| void
                             if tv?
                                 target[prop] = that
                             else
@@ -320,22 +331,22 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                         if a? and a.type is \ellipsis 
                             j = i 
                             break
-                        fa.push sf a
+                        fa.push a
                         
                     for i from j + 1 til arr.length
                         a = arr[i]
-                        la.push sf a
+                        la.push a
 
                     if arr[j].length == 0
-                        ell = sf lits\*
+                        ell = lits\*
                     else
-                        ell = sf arr[j]0
+                        ell = arr[j]0
 
                     return (v)->
                         e "Argument tuple length doesn't match" if v.length < arr.length - 1
-                        fp = [fa[i](v[i]) for i til j]
-                        lp = [la[i](v[i + v.length - arr.length + j + 1]) for i til arr.length - j - 1]
-                        mp = [ell(v[i]) for i from j til v.length - arr.length + j + 1]
+                        fp = [sf(fa[i])(v[i]) for i til j]
+                        lp = [sf(la[i])(v[i + v.length - arr.length + j + 1]) for i til arr.length - j - 1]
+                        mp = [sf(ell)(v[i]) for i from j til v.length - arr.length + j + 1]
                         fp ++ mp ++ lp
 
                 else
@@ -348,35 +359,34 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
             else if arr.0?
                 u = [arr.0]
             
-            ret = sf arr.1
+            ret = arr.1
 
             base = (fun,g)->
                 (...b)->
-                    b = g b
-                    ret fun.apply @, b
+                    b |>= sf g
+                    sf ret <| fun.apply @, b
 
             switch arr.arrow-type
             | \--> \!--> => 
                 if u.length > 1
                     u.type = \tuple 
                     arity = u.length
-                    fs = [sf u[i] for i til arity]
                     _curry-helper = (params)->
                         (fun)-> 
                             e "Not a Function" unless $typeof(fun) is \Function
                             (...args)->
                                 if args.length is 0 #execute the curry
                                     for i til arity
-                                        fs[i] params[i] #last check
-                                    ret fun.apply @
+                                        sf u[i] <| params[i] #last check
+                                    sf ret <| fun.apply @
                                 else #continue currying
                                     ps = params ++ args
                                     e 'Incorrect arity of curried arrow, received #{params.length} arguments and should be #{arity} arguments' if ps.length > arity
-                                    narg = [fs[i] ps[i] for i til ps.length]
+                                    narg = [sf(u[i])(ps[i]) for i til ps.length]
                                     if ps.length < arity    
                                         return ~> _curry-helper(ps)(fun.apply @, narg.slice params.length,ps.length) ...
                                     else
-                                        return ret fun.apply @, narg.slice params.length,ps.length
+                                        return sf ret <| fun.apply @, narg.slice params.length,ps.length
                     if arr.arrow-type is \--> #only check arguments, but don't curry the function
                         return _curry-helper []
                     else #otherwise we do curry the function
@@ -387,54 +397,80 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
       
             | _ =>
                 u.type = \argument-tuple
-                g = sf u
                 return (fun)-> 
                     e "Not a Function" unless $typeof(fun) is \Function
-                    base fun,g
+                    base fun,u
 
 
         | \or =>
-            or-helper do 
-                e
-                sf arr.0
-                sf arr.1
+            (v)->
+                oh = (e,A,B)-> ->
+                    try
+                        Af = A ...
+                    catch {message}
+                        m1 = message
+                        _Af = false
+                    
+                    try
+                        Bf = B ...
+                    catch {message}
+                        m2 = message
+                        _Bf = false
+
+                    if _Af == false and _Bf == false
+                        throw new Error m1 + ' And ' + m2
+                    else if _Af == false and _Bf != false
+                        return Bf
+                    else if _Bf == false and _Af != false
+                        return Af 
+                    else if $typeof(Af) is \Function and $typeof(Bf) is \Function
+                        return oh e, Af,Bf
+                    else #2 answers, then we just or them as usual
+                        return Af || Bf
+                
+                oh e,sf(arr.0), sf(arr.1) <| v
 
         | \and =>
-            and-helper do 
-                e
-                sf arr.0
-                sf arr.1
+            (v)-> 
+                ah = (e, A,B)-> -> B A ...
+                ah e, sf(arr.0), sf(arr.1) <| v
 
         | \modifier =>
             if arr.length == 1
                 arr.1 = lits\*
-            arr.0 sf(arr.1), e
+            (v)-> arr.0 sf(arr.1), e <| v
                 
         | \literal =>
-            throw new Error "Can't process empty literals" if arr.length == 0
+            throw new Error "Can't process empty literals" if !arr.0? or arr.0.length == 0
             a = arr.0
             if literals[a]?
-                return sf that
+                return (v)-> sf that <| v
             else
                 for k,v of literals 
                     if /^\/([\s\S]*)\/([gimy]*)$/.exec k
                         r = new RegExp that.1, that.2
                         if that$ = r.exec a
                             vt = v that$
-                            return sf if vt.length == 2 then ((err)-> (v)-> vt err,v) else vt 
+                            return sf if vt.length == 2 then ((err)-> (v)-> vt err,v) else vt
                 return -> if $typeof(it) is a then it else e "Not a#{if a.to-lower-case! in <[a e o u i]> then 'n' else ''} #a"
 
         # | \property \object-type => throw new Error "The type '#{arr.type}' should be parsed inside an object"
         # | \ellipsis => throw new Error "the type 'ellipsis' should be parsed inside an object or argument tuple"
         | \this-binding =>
-            tf = sf arr.0
-            cf = sf arr.1
             return (fun)->
-                h = cf fun 
-                (...b)-> h.apply tf(@), b
+                h = sf arr.1 <| fun 
+                (...b)-> h.apply sf(arr.0)(@), b
 
         | \string \number => 
             return -> if it is arr.0 then it else e "The #{arr.type} #{it} is unequal to #{arr.0}"
+
+        | \polymorphism =>
+            return (v)->
+                if polymf arr.0, $typeof v
+                    return v
+                else
+                    throw new Error "Polymorphism #{arr.type} can't match multiple types"
+
         | _ => throw new Error "Can't parse type #{arr.type} in this context"
 
     ((m,k,f)-->
@@ -492,6 +528,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
             .. \' (arr,pos)-> arr.set [] .prop \type \string .prop \mode \string .prop \stringType \' .prop \pos pos .up!
             .. /\d+(?:\,\d+)?|\-?Infinity/ (arr,mat,pos)-> arr.set [+mat.0] .prop \type \number .prop \pos pos .prop \closePos pos + mat.0.length
             .. \... (arr,pos)-> arr.set [] .prop \type \ellipsis .prop \pos pos .up!
+            .. /[a-z]\b/ (arr,mat,pos)-> arr.set [mat.0] .prop \type \polymorphism .prop \pos pos .prop \closeProp pos + 1
             .. [k for k of modifiers] (arr,val,pos)-> arr.set [] .prop \type \modifier .prop \pos pos .up!set modifiers[val] .right!
             .. \* (arr,pos)-> arr.set [\*] .prop \type \literal .prop \pos pos .prop \closePos pos + 1
             .. /[!\?$_\w]+\b/  (arr,val,pos)-> arr.set [val.0] .prop \type \literal .prop \pos pos .prop \closePos pos + val.0.length

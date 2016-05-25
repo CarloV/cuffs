@@ -62,7 +62,7 @@ describe 'Cuffs' ->
             o \Existent     [0 \0 {} [] true, ->]                       [undefined, void]
             o \Inexistent   [undefined, void]                           [0 \0 {} [] true, ->] 
             o \<String>     [\0]                                        [0]
-            n \<>
+            #n \<>
 
             o \SomeRandomType [new class SomeRandomType]              [0 \0 {} [] true, undefined, void ->]
 
@@ -201,7 +201,6 @@ describe 'Cuffs' ->
                 ''' 
                 [[\a 1], [1 \a], [\A]] 
                 [[\a \1], [1], [\a 1 2], []] 
-
 
     describe 'Async Statements' -> 
         o = (t,f)->
@@ -350,7 +349,7 @@ describe 'Cuffs' ->
                 foo = new Foo 
                 expect(foo.bar!)to.be.equal \baz
 
-            n '(...String,Number,...String)->'
+            #n '(...String,Number,...String)->'
 
         describe 'Curried Arrows' ->
             o \--> (force)->
@@ -438,8 +437,8 @@ describe 'Cuffs' ->
                 expect(foo.bar(\a)(\r))to.be.equal \bazar
                 expect(foo.qux(\a)(\r))to.be.equal \bazar
 
-            n '(String, ..., Number) --> '
-            n '(String, ...Integer, Number) !--> '
+            #n '(String, ..., Number) --> '
+            #n '(String, ...Integer, Number) !--> '
 
         describe 'Checking `this` on a function' ->
             o 'SomeClass @ Function' (force)->
@@ -485,6 +484,137 @@ describe 'Cuffs' ->
                 S = new SomeClass
                 expect(S.bar \1 \5)to.equal 11
                 expect(S.bar(\2)(\4))to.equal 11
+
+    describe 'Polymorphic Statements' ->
+        o = (t,g=[],b=[])->
+            <- they "should recognize the type #t"
+            force = OO t
+            for let gg in g
+                expect(force gg)to.eql gg
+            for let bb in b
+                expect(-> force bb)to.throw Error
+
+        oq = (t,g=[],b=[])->
+            <- they.only "should recognize the type #t"
+            force = OO t
+            for let gg in g
+                expect(force gg)to.eql gg
+            for let bb in b
+                expect(-> force bb)to.throw Error
+
+        n = (t)->
+            <- they "should not parse the type #t"
+            expect(-> OO t)to.throw Error
+
+        q = (t,f)->
+            <- they 'should recognize the type ' + t 
+            f OO t  
+
+        qo = (t,f)->
+            <- they.only 'should recognize the type ' + t 
+            f OO t  
+
+        describe 'Parametric Polymorphisms' ->
+            o 'a'               [0 \0 {} [] true, undefined, void ->]
+            o '(a,b)'           [['a',0]                                [true,{}]]
+            o '(a,a)'           [['a','b'], [1,2], [true, false]]       [['a',0], [true,{}]]
+            o '[a]'             [[],<[array of strings]>]               [[true,2,'3']]
+            o '(a,b,c,a,b,a)'   [["a",2,true,"d",5,"f"]]
+            o '{foo:a,bar:a}'   [{foo:"Foo",bar:"Bar"}]                 [{foo:"Foo",Bar:5}]
+
+            # q 'a -> a' (force)->
+            #     f = force -> it 
+            #     expect(f \String )to.equal \String 
+            #     expect(f 5)to.equal 5
+            #     expect(f yes)to.equal yes
+            #     expect(f {})to.eql {}
+            #     expect(f [])to.eql []
+
+            #     g = force -> +it 
+            #     expect(g 5)to.equal 5
+            #     expect(-> g '5')to.throw Error
+            #     expect(g 6)to.equal 6 #extra test due to caching of polymorphisms and error-handling
+
+            # q 'a -> a -> a' (force)->
+            #     f = force (a)-> (b)-> a
+            #     expect(f(\String)(\AnotherString))to.equal \String 
+            #     expect(f(1)(2))to.equal 1
+            #     expect(-> f(\String)(1))to.throw Error
+            #     expect(f(1)(2))to.equal 1 #extra test due to caching of polymorphisms and error-handling
+
+            # q '(a,b) -> (b,a)' (force)->
+            #     f = force (a,b)-> [b,a]
+            #     expect(f(1 2))to.eql [2 1]
+            #     expect(f(1 \b))to.eql [\b 1]
+
+            # q '((a,b)) -> (b,a)' (force)->
+            #     f = force ([a,b])-> [b,a]
+            #     expect(f([1 2]))to.eql [2 1]
+            #     expect(f([1 \b]))to.eql [\b 1]
+
+            # q '(a,a) --> a' (force)->
+            #     f = force (+)
+            #     expect(f(3,5))to.equal 8
+            #     expect(f(3)(5))to.equal 8
+            #     expect(f(\3,\5))to.equal \35
+            #     expect(f(\3)(\5))to.equal \35
+            #     expect(-> f(\3)(5))to.throw Error
+            #     expect(f(4)(2))to.equal 6 #extra test due to caching of polymorphisms and error-handling
+
+            # q '(a,a,a) --> a' (force)->
+            #     f = force (a,b,c)--> a + b + c
+            #     expect(f(1,2,3))to.equal 6
+            #     expect(f(1,2)(3))to.equal 6
+            #     expect(f(1)(2,3))to.equal 6
+            #     expect(f(1)(2)(3))to.equal 6
+            #     expect(f(\1)(\2)(\3))to.equal \123
+            #     expect(-> f(\1)(2)(\3))to.throw Error
+            #     expect(-> f(\1)(\2)(3))to.throw Error
+            #     expect(-> f(\1)(2))to.throw Error
+            #     expect(f(1)(2)(3))to.equal 6 #extra test due to caching of polymorphisms and error-handling
+
+            # q '(a,a,a) !--> a' (force)->
+            #     f = force (a,b,c)-> a + b + c
+            #     expect(f(1,2,3))to.equal 6
+            #     expect(f(1,2)(3))to.equal 6
+            #     expect(f(1)(2,3))to.equal 6
+            #     expect(f(1)(2)(3))to.equal 6
+            #     expect(f(\1)(\2)(\3))to.equal \123
+            #     expect(-> f(\1)(2)(\3))to.throw Error
+            #     expect(-> f(\1)(\2)(3))to.throw Error
+            #     expect(-> f(\1)(2))to.throw Error
+            #     expect(f(1)(2)(3))to.equal 6 #extra test due to caching of polymorphisms and error-handling
+
+            # q '(a, Maybe a) !--> a' (force)->
+            #     f = force (a,b) -> a + (b || 0)
+            #     expect(f(2,4))to.equal 6
+            #     expect(f(2)(4))to.equal 6
+            #     expect(f(6)!)to.equal 6
+            #     expect(-> f(\1)(5))to.throw Error
+            #     expect(-> f(true)!)to.throw Error
+            #     expect(f(6)!)to.equal 6
+
+            # q '(a -> a) -> a -> a' (force)->
+            #     f = force (b)-> (a)-> b a 
+            #     expect(f(-> it)("String"))to.equal \String
+
+            # q '((a -> b), [a]) !--> [b]' (force)->
+            #     map = force (f,ls)-> [f(v) for v in ls]
+            #     mapToNumbers = map -> +it
+            #     expect(mapToNumbers ['1','2','3'])to.eql [1,2,3]
+            #     expect(-> mapToNumbers [true, '2'])to.throw Error
+            #     expect(mapToNumbers ['1','2','3'])to.eql [1,2,3]
+
+            #     something-wrong = force (f,ls)-> [+f(ls) for v in ls]
+            #     mapToBooleans = something-wrong -> !!it
+            #     expect(-> mapToBooleans ['1','2','3'])to.throw Error
+            #     #Problem here is that (a -> b) and [a] and [b] don't share any temps
+            #     #When [a] gets called, (a -> b) will not know the new a in [a] unless it gets called again, or we somehow pass this a along afterwards
+            #     #For b something similar (but not the same) occurs, namely when (a -> b) is evaulated the b will never reach the return value [b]
+            #     #Maybe instead of keeping record of temp variables, we must change arr along the way instead and let execution of arr through sf wait until the last moment.
+            #     #Or everything that is not evaluated yet should have a common domain where the temps live, through some kind of construction.
+
+
 
 
     describe 'Custom Types' ->
