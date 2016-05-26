@@ -62,7 +62,7 @@ describe 'Cuffs' ->
             o \Existent     [0 \0 {} [] true, ->]                       [undefined, void]
             o \Inexistent   [undefined, void]                           [0 \0 {} [] true, ->] 
             o \<String>     [\0]                                        [0]
-            #n \<>
+            n \<>
 
             o \SomeRandomType [new class SomeRandomType]              [0 \0 {} [] true, undefined, void ->]
 
@@ -353,7 +353,7 @@ describe 'Cuffs' ->
                 foo = new Foo 
                 expect(foo.bar!)to.be.equal \baz
 
-            #n '(...String,Number,...String)->'
+            n '(...String,Number,...String)->'
 
         describe 'Curried Arrows' ->
             o \--> (force)->
@@ -441,8 +441,8 @@ describe 'Cuffs' ->
                 expect(foo.bar(\a)(\r))to.be.equal \bazar
                 expect(foo.qux(\a)(\r))to.be.equal \bazar
 
-            #n '(String, ..., Number) --> '
-            #n '(String, ...Integer, Number) !--> '
+            n '(String, ..., Number) --> '
+            n '(String, ...Integer, Number) !--> '
 
         describe 'Checking `this` on a function' ->
             o 'SomeClass @ Function' (force)->

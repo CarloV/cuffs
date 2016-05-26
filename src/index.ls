@@ -149,6 +149,63 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
             go-down arr, SL - 1
         arr.arr
 
+    syntax-check = (arr)!->
+        transparentify = (a)->
+            return {type: \undefined} unless a?
+            return transparentify a.0 if a.type is \parenthesis
+            a
+        el = (u)!-> throw new Error "Cuffs Syntax Error - #{arr.type} can't hold ellipsis" if transparentify u .type is \ellipsis
+
+        return unless arr? and arr.type?
+        switch arr.type 
+        | \parenthesis \array \ellipsis \object-type =>
+            el arr.0
+            syntax-check arr.0
+        | \object =>
+            ellipsii = [a for a in arr when a? and transparentify a .type is \ellipsis]length
+            throw new Error 'Cuffs Syntax Error - An object can only hold at most one ellipsis' if ellipsii > 1
+            for u in arr => 
+                syntax-check u
+        | \arrow =>
+            switch arr.arrow-type
+            | \--> \!--> => 
+                if arr.0? and arr.0.type in <[ parenthesis tuple ]>
+                    for u in arr.0
+                        el u
+                        syntax-check u
+                else
+                    el arr.0
+                    syntax-check arr.0
+                el arr.1
+                syntax-check arr.1
+
+            | \-> =>
+                if arr.0? and arr.0.type in <[ parenthesis tuple ]>
+                    ellipsii = [a for a in arr.0 when a? and transparentify a .type is \ellipsis]length
+                    throw new Error 'Cuffs Syntax Error - An argument tuple can only hold at most one ellipsis' if ellipsii > 1
+                    for u in arr.0
+                        syntax-check u
+                else
+                    syntax-check arr.0
+                el arr.1
+                syntax-check arr.1
+            | _ => throw new Error "Cuffs Syntax Error - Can't process arrow type #{arr.arrow-type}"
+        | \or \and \this-binding \tuple =>
+            for u in arr 
+                el u
+                syntax-check u
+        | \modifier =>
+            for u in arr 
+                el u
+                syntax-check u
+        | \literal => 
+            throw new Error "Cuffs Syntax Error - Can't process empty literals" if !arr.0? or arr.0.length == 0
+        | \polymorphism \string \number \undefined => #nothing happens here
+        | \property =>
+            el arr.1
+        | _ => 
+            throw new Error "Cuffs Syntax Error - Can't process type #{arr.type}"
+
     parse-to-function = (arr,err,poly_temp = {}, poly_delegates = [], poly_cleans = [], done)->
         e = err(arr.pos || 0, arr.close-pos || arr.pos || 0)
 
@@ -647,6 +704,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
         throw new Error "Cuffs Error - Cuffs requires the first argument to be a string" if $typeof(str) isnt \String  
         err = OOError str
         A = parse-to-array str 
+        syntax-check A
         F = parse-to-function A, err
         if &length == 1
             return F
