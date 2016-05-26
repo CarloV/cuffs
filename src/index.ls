@@ -158,14 +158,16 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
             done = !->
                 _tot_cleans++
                 if _tot_cleans is poly_cleans.length
-                    #console.log \CLEAN, _tot_cleans, poly_cleans, _poly_temp, poly_temp
+                    # console.log \CLEAN, _tot_cleans, poly_cleans, _poly_temp, poly_temp
                     temp_poly_temp = shallow-copy poly_temp
                     poly_temp := shallow-copy _poly_temp
-                    poly_delegates := []
                     poly_cleans := []
                     _tot_cleans := 0
                     #for c in poly_cleans => c!
-                    for d in poly_delegates => d temp_poly_temp, [] ,[] #the empty arrays must be defined here, so they keep being shared among all types
+                    for d in poly_delegates
+                        d temp_poly_temp, [] ,[] #the empty arrays must be defined here, so they keep being shared among all types
+
+                    poly_delegates := []
                     
         polymf = (ltr,typ)->
             #console.log ltr,typ, poly_temp
@@ -174,9 +176,9 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
             true
 
 
-        sf = (u, pt = poly_temp, pd = poly_delegates, pc = poly_cleans)->
+        sf = (u, pt = poly_temp, pd = poly_delegates, pc = poly_cleans, dn = done)->
             switch $typeof u
-            | \Array => return parse-to-function u, err, pt, pd, pc, done
+            | \Array => return parse-to-function u, err, pt, pd, pc, dn
             | \Function => return u e
             | _ => return lits.Inexistent e #only Undefined will be here
 
@@ -184,9 +186,13 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
             R = x!
             ->
                 poly_cleans.push arr.type
-                #console.log \IN arr.type, JSON.stringify(poly_temp), JSON.stringify(_poly_temp), poly_temp is _poly_temp
-                r = R ...
-                #console.log \OUT arr.type, JSON.stringify(poly_temp), JSON.stringify(_poly_temp), poly_temp is _poly_temp
+                # console.log \IN arr.type, JSON.stringify(poly_temp), JSON.stringify(_poly_temp), poly_temp is _poly_temp
+                try
+                    r = R ...
+                catch
+                    done!
+                    throw e
+                # console.log \OUT arr.type, JSON.stringify(poly_temp), JSON.stringify(_poly_temp), poly_temp is _poly_temp
                 done!
                 r
 
@@ -362,31 +368,93 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
             ret = arr.1
 
             base = (fun,g)->
+                pd = poly_delegates
+                pc = poly_cleans
+                pt = poly_temp
+                dn = done
+                poly_delegates.push (a,b,c)!->
+                    pt := a
+                    pd := b 
+                    pc := c 
+
+                    _tc = 0
+                    _pt = shallow-copy pt
+                    dn := !->
+                        _tc++
+                        if _tc is pc.length
+                            # console.log \CLEAN, _tc, pc, _pt, pt
+                            temp_poly_temp = shallow-copy pt
+                            pt := shallow-copy _pt
+                            pc := []
+                            _tc := 0
+                            #for c in poly_cleans => c!
+                            for d in pd => d temp_poly_temp, [] ,[] #the empty arrays must be defined here, so they keep being shared among all types
+                            pd := []
                 (...b)->
-                    b |>= sf g
-                    sf ret <| fun.apply @, b
+                    pc.push "function"
+                    try
+                        b |>= sf g, pt, pd, pc, dn
+                        r = sf ret, pt, pd, pc, dn <| fun.apply @, b
+                    catch
+                        dn!
+                        throw e
+                    dn!
+                    r
 
             switch arr.arrow-type
             | \--> \!--> => 
                 if u.length > 1
                     u.type = \tuple 
                     arity = u.length
-                    _curry-helper = (params)->
+                    _curry-helper = (params,_pd = poly_delegates, _pc = poly_cleans, _pt = poly_temp, _dn = done)->
                         (fun)-> 
                             e "Not a Function" unless $typeof(fun) is \Function
+                            pd = _pd
+                            pc = _pc
+                            pt = _pt
+                            dn = _dn
+                            # console.log 'Delegate Curry',params
+                            _pd.push (a,b,c)!->
+                                # console.log 'Execute Delegate Curry',params
+                                pt := a
+                                pd := b 
+                                pc := c 
+
+                                _tc = 0
+                                _pt = shallow-copy pt
+                                dn := !->
+                                    _tc++
+                                    if _tc is pc.length
+                                        # console.log \CLEAN, _tc, pc, _pt, pt
+                                        tpt = shallow-copy pt
+                                        pt := shallow-copy _pt
+                                        pc := []
+                                        _tc := 0
+                                        #for c in poly_cleans => c!
+                                        for d in pd => d tpt, [] ,[] #the empty arrays must be defined here, so they keep being shared among all types
+                                        pd := []
                             (...args)->
-                                if args.length is 0 #execute the curry
-                                    for i til arity
-                                        sf u[i] <| params[i] #last check
-                                    sf ret <| fun.apply @
-                                else #continue currying
-                                    ps = params ++ args
-                                    e 'Incorrect arity of curried arrow, received #{params.length} arguments and should be #{arity} arguments' if ps.length > arity
-                                    narg = [sf(u[i])(ps[i]) for i til ps.length]
-                                    if ps.length < arity    
-                                        return ~> _curry-helper(ps)(fun.apply @, narg.slice params.length,ps.length) ...
-                                    else
-                                        return sf ret <| fun.apply @, narg.slice params.length,ps.length
+                                pc.push "curry"
+                                try
+                                    r = do ~>
+                                        if args.length is 0 #execute the curry
+                                            for i til arity
+                                                sf u[i], pt, pd, pc, dn <| params[i] #last check
+                                            sf ret, pt, pd, pc, dn <| fun.apply @
+                                        else #continue currying
+                                            ps = params ++ args
+                                            e 'Incorrect arity of curried arrow, received #{params.length} arguments and should be #{arity} arguments' if ps.length > arity
+                                            narg = [sf(u[i],pt,pd,pc,dn)(ps[i]) for i til ps.length]
+                                            if ps.length < arity    
+                                                _CH = _curry-helper ps,pd,pc,pt,dn <| fun.apply @, narg.slice params.length,ps.length
+                                                return ~> _CH ...
+                                            else
+                                                return sf ret, pt, pd, pc, dn <| fun.apply @, narg.slice params.length,ps.length
+                                catch
+                                    dn!
+                                    throw e
+                                dn!
+                                r
                     if arr.arrow-type is \--> #only check arguments, but don't curry the function
                         return _curry-helper []
                     else #otherwise we do curry the function
