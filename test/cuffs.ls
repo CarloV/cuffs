@@ -519,120 +519,159 @@ describe 'Cuffs' ->
             f OO t  
 
         describe 'Parametric Polymorphisms' ->
-            o 'a'               [0 \0 {} [] true, undefined, void ->]
-            o '(a,b)'           [['a',0]                                [true,{}]]
-            o '(a,a)'           [['a','b'], [1,2], [true, false]]       [['a',0], [true,{}]]
-            o '[a]'             [[],<[array of strings]>]               [[true,2,'3']]
-            o '(a,b,c,a,b,a)'   [["a",2,true,"d",5,"f"]]
-            o '{foo:a,bar:a}'   [{foo:"Foo",bar:"Bar"}]                 [{foo:"Foo",Bar:5}]
+            describe "Basic" ->
+                o 'a'               [0 \0 {} [] true, undefined, void ->]
+                o '(a,b)'           [['a',0]                                [true,{}]]
+                o '(a,a)'           [['a','b'], [1,2], [true, false]]       [['a',0], [true,{}]]
+                o '[a]'             [[],<[array of strings]>]               [[true,2,'3']]
+                o '(a,b,c,a,b,a)'   [["a",2,true,"d",5,"f"]]
+                o '{foo:a,bar:a}'   [{foo:"Foo",bar:"Bar"}]                 [{foo:"Foo",Bar:5}]
 
-            q 'a -> a' (force)->
-                f = force -> it 
-                expect(f \String )to.equal \String 
-                expect(f 5)to.equal 5
-                expect(f yes)to.equal yes
-                expect(f {})to.eql {}
-                expect(f [])to.eql []
+            describe "Through Arrows" ->
+                q 'a -> a' (force)->
+                    f = force -> it 
+                    expect(f \String )to.equal \String 
+                    expect(f 5)to.equal 5
+                    expect(f yes)to.equal yes
+                    expect(f {})to.eql {}
+                    expect(f [])to.eql []
 
-                g = force -> +it 
-                expect(g 5)to.equal 5
-                expect(-> g '5')to.throw Error
-                expect(g 6)to.equal 6 #extra test due to caching of polymorphisms and error-handling
+                    g = force -> +it 
+                    expect(g 5)to.equal 5
+                    expect(-> g '5')to.throw Error
+                    expect(g 6)to.equal 6 #extra test due to caching of polymorphisms and error-handling
 
-            q 'a -> a -> a' (force)->
-                f = force (a)-> (b)-> a
-                expect(f(\String)(\AnotherString))to.equal \String 
-                expect(f(1)(2))to.equal 1
-                expect(-> f(\String)(1))to.throw Error
-                expect(f(1)(2))to.equal 1 #extra test due to caching of polymorphisms and error-handling
+                q 'a -> a -> a' (force)->
+                    f = force (a)-> (b)-> a
+                    expect(f(\String)(\AnotherString))to.equal \String 
+                    expect(f(1)(2))to.equal 1
+                    expect(-> f(\String)(1))to.throw Error
+                    expect(f(1)(2))to.equal 1 #extra test due to caching of polymorphisms and error-handling
 
-            q '(a,b) -> (b,a)' (force)->
-                f = force (a,b)-> [b,a]
-                expect(f(1 2))to.eql [2 1]
-                expect(f(1 \b))to.eql [\b 1]
+                q '(a,b) -> (b,a)' (force)->
+                    f = force (a,b)-> [b,a]
+                    expect(f(1 2))to.eql [2 1]
+                    expect(f(1 \b))to.eql [\b 1]
 
-            q '((a,b)) -> (b,a)' (force)->
-                f = force ([a,b])-> [b,a]
-                expect(f([1 2]))to.eql [2 1]
-                expect(f([1 \b]))to.eql [\b 1]
+                q '((a,b)) -> (b,a)' (force)->
+                    f = force ([a,b])-> [b,a]
+                    expect(f([1 2]))to.eql [2 1]
+                    expect(f([1 \b]))to.eql [\b 1]
 
-            q '(a,a) --> a' (force)->
-                f = force (+)
-                expect(f(3,5))to.equal 8
-                expect(f(3)(5))to.equal 8
+                q '(a,a) --> a' (force)->
+                    f = force (+)
+                    expect(f(3,5))to.equal 8
+                    expect(f(3)(5))to.equal 8
 
-                plus3 = f(3)
-                expect(plus3(5))to.equal 8
-                expect(-> plus3(\3))to.throw Error 
-                expect(plus3(6))to.equal 9
+                    plus3 = f(3)
+                    expect(plus3(5))to.equal 8
+                    expect(-> plus3(\3))to.throw Error 
+                    expect(plus3(6))to.equal 9
 
-                expect(f(\3,\5))to.equal \35
-                expect(f(\3)(\5))to.equal \35
-                expect(-> f(\3)(5))to.throw Error
-                expect(f(4)(2))to.equal 6 #extra test due to caching of polymorphisms and error-handling
+                    expect(f(\3,\5))to.equal \35
+                    expect(f(\3)(\5))to.equal \35
+                    expect(-> f(\3)(5))to.throw Error
+                    expect(f(4)(2))to.equal 6 #extra test due to caching of polymorphisms and error-handling
 
-            q '(a,a,a) --> a' (force)->
-                f = force (a,b,c)--> a + b + c
-                expect(f(1,2,3))to.equal 6
-                expect(f(1,2)(3))to.equal 6
-                expect(f(1)(2,3))to.equal 6
-                expect(f(1)(2)(3))to.equal 6
-                expect(f(\1)(\2)(\3))to.equal \123
-                expect(-> f(\1)(2)(\3))to.throw Error
-                expect(-> f(\1)(\2)(3))to.throw Error
-                expect(-> f(\1)(2))to.throw Error
-                expect(f(1)(2)(3))to.equal 6 #extra test due to caching of polymorphisms and error-handling
+                q '(a,a,a) --> a' (force)->
+                    f = force (a,b,c)--> a + b + c
+                    expect(f(1,2,3))to.equal 6
+                    expect(f(1,2)(3))to.equal 6
+                    expect(f(1)(2,3))to.equal 6
+                    expect(f(1)(2)(3))to.equal 6
+                    expect(f(\1)(\2)(\3))to.equal \123
+                    expect(-> f(\1)(2)(\3))to.throw Error
+                    expect(-> f(\1)(\2)(3))to.throw Error
+                    expect(-> f(\1)(2))to.throw Error
+                    expect(f(1)(2)(3))to.equal 6 #extra test due to caching of polymorphisms and error-handling
 
-            q '(a,a,a) !--> a' (force)->
-                f = force (a,b,c)-> a + b + c
-                expect(f(1,2,3))to.equal 6
-                expect(f(1,2)(3))to.equal 6
-                expect(f(1)(2,3))to.equal 6
-                expect(f(1)(2)(3))to.equal 6
-                expect(f(\1)(\2)(\3))to.equal \123
-                expect(-> f(\1)(2)(\3))to.throw Error
-                expect(-> f(\1)(\2)(3))to.throw Error
-                expect(-> f(\1)(2))to.throw Error
-                expect(f(1)(2)(3))to.equal 6 #extra test due to caching of polymorphisms and error-handling
+                q '(a,a,a) !--> a' (force)->
+                    f = force (a,b,c)-> a + b + c
+                    expect(f(1,2,3))to.equal 6
+                    expect(f(1,2)(3))to.equal 6
+                    expect(f(1)(2,3))to.equal 6
+                    expect(f(1)(2)(3))to.equal 6
+                    expect(f(\1)(\2)(\3))to.equal \123
+                    expect(-> f(\1)(2)(\3))to.throw Error
+                    expect(-> f(\1)(\2)(3))to.throw Error
+                    expect(-> f(\1)(2))to.throw Error
+                    expect(f(1)(2)(3))to.equal 6 #extra test due to caching of polymorphisms and error-handling
 
-            q '(a, Maybe a) !--> a' (force)->
-                f = force (a,b) -> a + (b || 0)
-                expect(f(2,4))to.equal 6
-                expect(f(2)(4))to.equal 6
-                expect(f(6)!)to.equal 6
-                expect(-> f(\1)(5))to.throw Error
-                expect(-> f(true)!)to.throw Error
-                expect(f(6)!)to.equal 6
+                q '(a, Maybe a) !--> a' (force)->
+                    f = force (a,b) -> a + (b || 0)
+                    expect(f(2,4))to.equal 6
+                    expect(f(2)(4))to.equal 6
+                    expect(f(6)!)to.equal 6
+                    expect(-> f(\1)(5))to.throw Error
+                    expect(-> f(true)!)to.throw Error
+                    expect(f(6)!)to.equal 6
 
-            q '(a -> a) -> a -> a' (force)->
-                f = force (b)-> (a)-> b a 
-                expect(f(-> it)("String"))to.equal \String
+                q '(a -> a) -> a -> a' (force)->
+                    f = force (b)-> (a)-> b a 
+                    expect(f(-> it)("String"))to.equal \String
 
-            q '((a -> b), [a]) -> [b]' (force)->
-                map = force (f,ls)-> [f(v) for v in ls]
-                expect(map (-> +it), ['1','2','3'])to.eql [1,2,3]
-                expect(-> map (-> +it), [true, '2'])to.throw Error
-                expect(map (-> +it), ['1','2','3'])to.eql [1,2,3]
+                q '((a -> b), [a]) -> [b]' (force)->
+                    map = force (f,ls)-> [f(v) for v in ls]
+                    expect(map (-> +it), ['1','2','3'])to.eql [1,2,3]
+                    expect(-> map (-> +it), [true, '2'])to.throw Error
+                    expect(map (-> +it), ['1','2','3'])to.eql [1,2,3]
 
-                something-wrong = force (f,ls)-> [+f(v) for v in ls]
-                expect(-> something-wrong (-> !!it), ['1','2','3'])to.throw Error
+                    something-wrong = force (f,ls)-> [+f(v) for v in ls]
+                    expect(-> something-wrong (-> !!it), ['1','2','3'])to.throw Error
 
-            q '((a -> b), (b -> c)) -> a -> c' (force)->
-                compose = force (f,g)-> (v)-> g(f(v))
-                f = compose (-> +it), (-> it.to-string!)
-                expect(f(true))to.equal \1
-            
-            q '((a -> b), [a]) !--> [b]' (force)->
-                map = force (f,ls)-> [f(v) for v in ls]
-                mapToNumbers = map -> +it
-                expect(mapToNumbers ['1','2','3'])to.eql [1,2,3]
-                expect(-> mapToNumbers [true, '2'])to.throw Error
-                expect(mapToNumbers ['1','2','3'])to.eql [1,2,3]
+                q '((a -> b), (b -> c)) -> a -> c' (force)->
+                    compose = force (f,g)-> (v)-> g(f(v))
+                    h = compose (-> +it), (-> it.to-string!)
+                    expect(h(true))to.equal \1
 
-                something-wrong = force (f,ls)-> [+f(ls) for v in ls]
-                mapToBooleans = something-wrong -> !!it
-                expect(-> mapToBooleans ['1','2','3'])to.throw Error
+                    wrong-compose = force (f,g)-> (v)-> f(g(v))
+                    h = wrong-compose (-> +it), (-> it.to-string!)
+                    expect(-> h(true))to.throw Error
+                
+                q '((a -> b), [a]) !--> [b]' (force)->
+                    map = force (f,ls)-> [f(v) for v in ls]
+                    mapToNumbers = map -> +it
+                    expect(mapToNumbers ['1','2','3'])to.eql [1,2,3]
+                    expect(-> mapToNumbers [true, '2'])to.throw Error
+                    expect(mapToNumbers ['1','2','3'])to.eql [1,2,3]
 
+                    something-wrong = force (f,ls)-> [+f(ls) for v in ls]
+                    mapToBooleans = something-wrong -> !!it
+                    expect(-> mapToBooleans ['1','2','3'])to.throw Error
+
+                q '(a -> a -> a) -> a -> a -> a' (force)->
+                    evx = force (f)-> (a)-> (b)-> f(b)(a)
+                    F = evx (+)
+                    expect(F(1)(2))to.equal 3
+                    expect(-> F(true)(false))to.throw Error
+                    expect(F(\a)(\b))to.equal \ba
+                    expect(-> F(1)(false))to.throw Error
+
+                    idx = force -> it 
+                    G = idx (+)
+                    expect(G(1)(2))to.equal 3
+                    expect(-> G(true)(false))to.throw Error
+                    expect(G(\a)(\b))to.equal \ab
+                    expect(-> G(1)(false))to.throw Error
+
+                q '(a -> b -> c) -> c -> a -> b -> c' (force)->
+                    evx = force (f)-> (c)-> (a)-> (b)-> c + f(a)(b)
+                    F = evx (+)
+                    expect(F(1)(2)(3))to.equal 6
+                    expect(-> F(true)(2)(3))to.throw Error 
+                    expect(F('c')(1)(void))to.equal \cNaN
+
+                they 'should recognize the type ((a -> b),a,Number) --> #delayed' (done)->
+                    force = OO '((a -> a),a,Number) --> #delayed'
+                    F = force (g,a,b)!--> 
+                        <-! set-timeout _, b
+                        expect(g(a))to.equal a
+                        done!
+
+                    F((-> it))(\100)(10)
+
+            describe "Through Proxies" ->
+                
 
 
 

@@ -243,13 +243,13 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
             R = x!
             ->
                 poly_cleans.push arr.type
-                # console.log \IN arr.type, JSON.stringify(poly_temp), JSON.stringify(_poly_temp), poly_temp is _poly_temp
+                #console.log \IN arr.type, JSON.stringify(poly_temp), JSON.stringify(_poly_temp), JSON.stringify(arr), arr.pos, arr.close-pos
                 try
                     r = R ...
                 catch
                     done!
                     throw e
-                # console.log \OUT arr.type, JSON.stringify(poly_temp), JSON.stringify(_poly_temp), poly_temp is _poly_temp
+                #console.log \OUT arr.type, JSON.stringify(poly_temp), JSON.stringify(_poly_temp), JSON.stringify(arr), arr.pos, arr.close-pos
                 done!
                 r
 
@@ -382,7 +382,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                 ellipsii = [a for a in arr when a? and a.type is \ellipsis]length
                 if ellipsii == 0
                     return (v)-> 
-                        e "Argument Tuple length doesn't match" if v.length isnt arr.length
+                        e "Argument Tuple length doesn't match" if v.length isnt arr.length #maybe change this to >
                         [sf(arr[i])(v[i]) for i til arr.length]
 
                 else if ellipsii == 1
@@ -417,7 +417,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
 
         | \arrow =>
             u = []
-            if arr.0? and arr.0.type in <[ tuple parenthesis ]>
+            if arr.0? and arr.0.type in <[ tuple parenthesis argument-tuple]>
                 u = arr.0
             else if arr.0?
                 u = [arr.0]
