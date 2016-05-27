@@ -220,10 +220,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                     poly_temp := shallow-copy _poly_temp
                     poly_cleans := []
                     _tot_cleans := 0
-                    #for c in poly_cleans => c!
-                    for d in poly_delegates
-                        d temp_poly_temp, [] ,[] #the empty arrays must be defined here, so they keep being shared among all types
-
+                    for d in poly_delegates => d temp_poly_temp, [] ,[] #the empty arrays must be defined here, so they keep being shared among all types
                     poly_delegates := []
                     
         polymf = (ltr,typ)->
@@ -385,7 +382,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                         e "Argument Tuple length doesn't match" if v.length isnt arr.length #maybe change this to >
                         [sf(arr[i])(v[i]) for i til arr.length]
 
-                else if ellipsii == 1
+                else #if ellipsii == 1 #already checked by syntax-check
                     j = 0
                     fa = []
                     la = []
@@ -411,9 +408,6 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                         lp = [sf(la[i])(v[i + v.length - arr.length + j + 1]) for i til arr.length - j - 1]
                         mp = [sf(ell)(v[i]) for i from j til v.length - arr.length + j + 1]
                         fp ++ mp ++ lp
-
-                else
-                    throw new Error 'An argument tuple can only hold at most one ellipsis'
 
         | \arrow =>
             u = []
@@ -444,7 +438,6 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                             pt := shallow-copy _pt
                             pc := []
                             _tc := 0
-                            #for c in poly_cleans => c!
                             for d in pd => d temp_poly_temp, [] ,[] #the empty arrays must be defined here, so they keep being shared among all types
                             pd := []
                 (...b)->
@@ -470,9 +463,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                             pc = _pc
                             pt = _pt
                             dn = _dn
-                            # console.log 'Delegate Curry',params
                             _pd.push (a,b,c)!->
-                                # console.log 'Execute Delegate Curry',params
                                 pt := a
                                 pd := b 
                                 pc := c 
@@ -487,11 +478,10 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                                         pt := shallow-copy _pt
                                         pc := []
                                         _tc := 0
-                                        #for c in poly_cleans => c!
                                         for d in pd => d tpt, [] ,[] #the empty arrays must be defined here, so they keep being shared among all types
                                         pd := []
                             (...args)->
-                                pc.push "curry"
+                                pc.push \curry
                                 try
                                     r = do ~>
                                         if args.length is 0 #execute the curry
@@ -504,9 +494,9 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                                             narg = [sf(u[i],pt,pd,pc,dn)(ps[i]) for i til ps.length]
                                             if ps.length < arity    
                                                 _CH = _curry-helper ps,pd,pc,pt,dn <| fun.apply @, narg.slice params.length,ps.length
-                                                return ~> _CH ...
+                                                ~> _CH ...
                                             else
-                                                return sf ret, pt, pd, pc, dn <| fun.apply @, narg.slice params.length,ps.length
+                                                sf ret, pt, pd, pc, dn <| fun.apply @, narg.slice params.length,ps.length
                                 catch
                                     dn!
                                     throw e

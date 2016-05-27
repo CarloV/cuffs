@@ -558,6 +558,22 @@ describe 'Cuffs' ->
                     expect(f([1 2]))to.eql [2 1]
                     expect(f([1 \b]))to.eql [\b 1]
 
+                q '(a,b) -> a | b' (force)->
+                    f = force (a,b)-> a 
+                    g = force (a,b)-> b 
+                    expect(f(1 \1))to.equal 1
+                    expect(g(1 \1))to.equal \1
+                    expect(f(\1 1))to.equal \1
+                    expect(g(\1 1))to.equal 1
+
+                    f2 = force (a,b)-> a + b
+                    expect(-> f2(true false))to.throw Error
+
+                q '(a,b) -> [a | b]' (force)->
+                    f = force (a,b)-> [a,b] 
+                    expect(f(1 \1))to.eql [1 \1]
+                    expect(f(true \that))to.eql [true \that]
+
                 q '(a,a) --> a' (force)->
                     f = force (+)
                     expect(f(3,5))to.equal 8
@@ -661,7 +677,7 @@ describe 'Cuffs' ->
                     expect(-> F(true)(2)(3))to.throw Error 
                     expect(F('c')(1)(void))to.equal \cNaN
 
-                they 'should recognize the type ((a -> b),a,Number) --> #delayed' (done)->
+                they 'should recognize the type ((a -> a),a,Number) --> #delayed' (done)->
                     force = OO '((a -> a),a,Number) --> #delayed'
                     F = force (g,a,b)!--> 
                         <-! set-timeout _, b
@@ -670,10 +686,21 @@ describe 'Cuffs' ->
 
                     F((-> it))(\100)(10)
 
-            describe "Through Proxies" ->
-                
+                they 'should recognize the type ((a -> b),a,Number) --> b #delayed' (done)->
+                    force = OO '((a -> b),a,Number) --> b #delayed'
+                    G = force (g,a,c)--> 
+                        set-timeout do
+                            !->
+                                expect(g(a))to.equal a.to-string!
+                                done!
+                            c
+                        'b should be a string now'
 
+                    expect(G(-> it.to-string!)(100)(10))to.equal 'b should be a string now'
 
+                q 'a @ a -> a' (force)->
+                    String::wow = force -> @ + it
+                    expect("a".wow "b")to.equal "ab"
 
     describe 'Custom Types' ->
         they 'should be able to add custom types based on functions' ->
