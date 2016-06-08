@@ -406,6 +406,9 @@ var c = new SomeClass;
 b.add(c).toString(); //FooFooBarBar
 a.add(c).toString(); //BazFooBarBar
 ```
+### Polymorphisms
+
+Documentation coming soon...
 
 ### Comments
 

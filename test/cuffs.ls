@@ -879,6 +879,57 @@ describe 'Cuffs' ->
             expect(-> obj.4 = \String)to.throw Error
             expect(-> obj.foo = "LOL")to.throw Error
 
+        describe 'On Polymorphisms' ->
+            they 'should remember the polymorphism in tuples' ->
+                force = OOProxy '(a,b,a)'
+                expect(-> force [1,\1,\1])to.throw Error
+                arr = force [1,\1,1]
+                arr[2] = 5
+                expect(-> arr[2] = \5)to.throw Error
+                expect(-> arr[0] = \5)to.throw Error
+                expect(-> arr[1] = 1)to.throw Error #b only occurs once, so can be what it want to be, but the polymorphism already forced a type for b
+                expect(arr[2])to.equal 5
+
+            they 'should remember the polymorphism in arrays' ->
+                force = OOProxy '[a]'
+                arr = force [1,2,3]
+                expect(-> arr.push \4)to.throw Error 
+                arr.push 4
+                expect arr.length .to.equal 4
+
+            they 'should remember the polymorphisms in objects' ->
+                force = OOProxy '{foo:a, bar: Maybe a}'
+                o = force {foo: \foo}
+                expect(-> o['bar'] = 5)to.throw Error 
+                o['bar'] = "LOL"
+                o['bar'] = null
+
+            they 'should remember the polymorphisms in nested structures' ->
+                force = OOProxy '{foo: {bar: a}, baz: Maybe a}'
+                o = force {foo:{bar:\qux}}
+                expect(-> o.baz = 5)to.throw Error 
+                o['baz'] = "LOL"
+                o['baz'] = null
+
+                force = OOProxy '{foo: {bar: a}, baz: Maybe {qux: a}}'
+                o = force {foo:{bar:\5}}
+                expect(-> o.baz = {qux: 5})to.throw Error 
+                o.baz = {qux: \5}
+                o['baz'] = null
+
+                force = OOProxy '{foo: Maybe {bar: a}, baz: Maybe {qux: a}}'
+                o = force {}
+                o.foo = {bar:\5}
+                expect(-> o.baz = {qux: 5})to.throw Error 
+                o.baz = {qux: \5}
+                o['baz'] = null
+
+
+
+
+
+
+
 
 
 

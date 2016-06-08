@@ -271,7 +271,7 @@ Cuffs = ({custom-types = {}, use-proxies = false, on-error} = {})->
                         if isNaN prop or +prop < 0 or (+prop)%1 isnt 0
                             target[prop] = val
                             return true
-                        target[prop] = sf(arr.0) val
+                        target[prop] = sf arr.0 <| val
                         true
 
         | \object =>
